@@ -7,6 +7,25 @@
     "default_title": "PocketZot",
     "default_popup": "dist/pocket_zot.html"
   },
-  "permissions": ["storage"],
-  "host_permissions": ["http://127.0.0.1:8000/*"]
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": ["<all_urls>"],
+
+"content_scripts": [{
+  "matches": ["http://*/*", "https://*/*"],
+  "js": [
+    "dist/anteaterchar/physics.js",
+    "dist/anteaterchar/stateMachine.js",
+    "dist/anteaterchar/sprite.js",
+    "dist/anteaterchar/dragController.js",
+    "dist/anteaterchar/anteater.js",
+    "dist/anteaterchar/messageListener.js"
+  ],
+  "run_at": "document_idle"
+}],
+
+"web_accessible_resources": [{
+  "resources": ["dist/anteaterchar/assets/*"],
+  "matches": ["<all_urls>"]
+}]
+
 }
