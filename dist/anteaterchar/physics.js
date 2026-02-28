@@ -10,9 +10,9 @@
  */
 
 var PZPhysics = (function () {
-  var GRAVITY         = 0.55;
+  var GRAVITY         = 0.25;
   var TERMINAL_VEL    = 20;
-  var WALK_SPEED      = 1.8;
+  var WALK_SPEED      = 0.5;
   var FRICTION        = 0.80;
   var THROW_AIR_DAMP  = 0.97;
   var MAX_THROW_SPEED = 22;
