@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import AnteaterButton from "./anteaterchar/AnteaterButton.jsx";
+import AnteaterButton from "../anteaterchar/AnteaterButton.jsx";
 import {
   Box,
   Heading,

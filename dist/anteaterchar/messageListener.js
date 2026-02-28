@@ -21,6 +21,15 @@
   if (window.__pocketzotLoaded) return;
   window.__pocketzotLoaded = true;
 
+  // Verbose startup logging — verify all globals loaded in DevTools
+  console.log('[PocketZot] messageListener starting...');
+  console.log('[PocketZot] PZPhysics      =', typeof window.PZPhysics);
+  console.log('[PocketZot] PZStateMachine =', typeof window.PZStateMachine);
+  console.log('[PocketZot] PZSprite       =', typeof window.PZSprite);
+  console.log('[PocketZot] PZDrag         =', typeof window.PZDrag);
+  console.log('[PocketZot] PZAnteater     =', typeof window.PZAnteater);
+  console.log('[PocketZot] Content script ready ✓');
+
   // Lazily constructed — we wait until first message to build it
   var anteater = null;
 
@@ -28,13 +37,13 @@
     if (!anteater) {
       // chrome.runtime.getURL gives us the path to files inside the extension package.
       // This is how we load the sprite sheet from the extension's own files.
-      var spriteUrl = chrome.runtime.getURL('anteaterchar/assets/anteater.png');
+      var spriteUrl = null; //chrome.runtime.getURL('anteaterchar/assets/anteater.png');
       anteater = new window.PZAnteater({ spriteUrl: spriteUrl });
     }
     return anteater;
   }
 
-  chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+  chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {
     switch (message.action) {
 
       case 'SPAWN':
@@ -65,5 +74,4 @@
     return true;
   });
 
-  console.log('[PocketZot] Content script ready');
 })();
