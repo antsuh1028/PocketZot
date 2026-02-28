@@ -3,3 +3,5 @@ node_modules
 # package.json
 # vite.config.js
 backend\.env
+.env.local
+.env*.local
