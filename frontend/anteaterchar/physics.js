@@ -56,12 +56,10 @@ var PZPhysics = (function () {
       this.vy *= THROW_AIR_DAMP;
     }
 
-    // Integrate
     this.x += this.vx;
     this.y += this.vy;
 
-    // --- Collision resolution ---
-
+    // Collision
     var floorY = viewportH - this.h;
 
     // Floor

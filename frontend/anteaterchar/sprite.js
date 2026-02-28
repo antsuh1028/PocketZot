@@ -1,21 +1,11 @@
 /**
- * sprite.js
- * Creates and manages the mascot's DOM element.
- * Plain JS — no imports, no bundler.
- *
- * ── Placeholder vs. Real Sprites ─────────────────────────────────────────
- *
- * Right now the character is rendered as a colored square with an emoji,
- * cycling through CSS classes per-state. This lets you test all physics
- * and behavior without any art assets.
- *
- * When you have a real sprite sheet:
- *   1. Put it at:  anteaterchar/assets/anteater.png  (in your extension root)
+ * WHEN SPRITE SHEET IS DONE:
+ *   1. Put it at:  anteaterchar/assets/anteater.png  (ext root)
  *   2. Set SPRITE_URL below using the URL passed in from the content script
- *   3. Fill in the FRAMES map with { x, y } pixel offsets into the sheet
+ *   3. Fill in the FRAMES map with { x, y } pixel offsets into the sheet (if one sheet, unless we do straight images?)
  *   4. Remove the placeholder emoji/color logic
  *
- * ── Sprite Sheet Convention (matches Shimeji row layout) ─────────────────
+ * sprite sheet convention (based on shimeji)
  *   Each tile = TILE_SIZE × TILE_SIZE px (default 64)
  *   Row 0: Fall    (2 frames)
  *   Row 1: Land    (1 frame)

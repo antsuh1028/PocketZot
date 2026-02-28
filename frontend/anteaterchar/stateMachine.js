@@ -88,7 +88,6 @@ var PZStateMachine = (function () {
    */
   StateMachine.prototype.update = function (dt, body) {
     this._timer += dt;
-
     var vw = window.innerWidth;
 
     switch (this.state) {

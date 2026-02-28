@@ -54,7 +54,7 @@
     this._drag = new PZDrag.DragController(this._sprite.el, this._body, this._fsm);
     this._drag.attach();
 
-    // Start game loop
+    // Start game loop ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     this._lastTime = performance.now();
     this._rafId = requestAnimationFrame(this._loop.bind(this));
 
@@ -75,14 +75,14 @@
     this._drag   = null;
     this._rafId  = null;
 
-    console.log('[PocketZot] Anteater despawned');
+    console.log('anteater despawned');
   };
 
   Anteater.prototype.isActive = function () {
     return this._active;
   };
 
-  // ── Game Loop ───────────────────────────────────────────────────────────
+  // Game Loop ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   Anteater.prototype._loop = function (timestamp) {
     if (!this._active) return;
