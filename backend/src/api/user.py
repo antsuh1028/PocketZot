@@ -1,7 +1,7 @@
-from uuid import uuid4
-
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -12,28 +12,79 @@ class UserCreate(BaseModel):
 
 
 class UserResponse(BaseModel):
-	id: str
+	id: int
 	name: str
 	email: EmailStr
 
 
-_users: dict[str, UserResponse] = {}
-
-
 @router.get("", response_model=list[UserResponse])
-async def list_users() -> list[UserResponse]:
-	return list(_users.values())
+async def list_users(request: Request) -> list[UserResponse]:
+	query = text(
+		"""
+		SELECT id, name, email
+		FROM users
+		ORDER BY id
+		"""
+	)
+	with request.app.state.db_engine.connect() as connection:
+		rows = connection.execute(query).mappings().all()
+	return [UserResponse.model_validate(row) for row in rows]
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def create_user(payload: UserCreate) -> UserResponse:
-	user = UserResponse(id=str(uuid4()), name=payload.name, email=payload.email)
-	_users[user.id] = user
-	return user
+async def create_user(payload: UserCreate, request: Request) -> UserResponse:
+	query = text(
+		"""
+		INSERT INTO users (name, email)
+		VALUES (:name, :email)
+		RETURNING id, name, email
+		"""
+	)
+	try:
+		with request.app.state.db_engine.begin() as connection:
+			row = connection.execute(
+				query,
+				{"name": payload.name, "email": str(payload.email)},
+			).mappings().one()
+	except IntegrityError as exc:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="User with this email may already exist",
+		) from exc
+
+	return UserResponse.model_validate(row)
 
 
 @router.get("/{user_id}", response_model=UserResponse)
-async def get_user(user_id: str) -> UserResponse:
-	if user_id not in _users:
+async def get_user(user_id: int, request: Request) -> UserResponse:
+	query = text(
+		"""
+		SELECT id, name, email
+		FROM users
+		WHERE id = :user_id
+		"""
+	)
+	with request.app.state.db_engine.connect() as connection:
+		row = connection.execute(query, {"user_id": user_id}).mappings().first()
+
+	if row is None:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-	return _users[user_id]
+
+	return UserResponse.model_validate(row)
+
+@router.get("/email/{email}", response_model=UserResponse)
+async def get_user_by_email(email: str, request: Request) -> UserResponse:
+	query = text(
+		"""
+		SELECT id, name, email
+		FROM users
+		WHERE email = :email
+		"""
+	)
+	with request.app.state.db_engine.connect() as connection:
+		row = connection.execute(query, {"email": str(email)}).mappings().first()
+
+	if row is None:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+	return UserResponse.model_validate(row)

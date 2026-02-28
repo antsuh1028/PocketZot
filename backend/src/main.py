@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .api.anteater import router as anteater_router
+from .api.ants import router as ants_router
 from .api.user import router as user_router
 from .db import check_db_connection, get_db_engine
 
@@ -55,6 +56,7 @@ def create_app() -> FastAPI:
 
 	app.include_router(user_router)
 	app.include_router(anteater_router)
+	app.include_router(ants_router)
 
 	return app
 

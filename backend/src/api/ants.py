@@ -177,9 +177,9 @@ async def update_user_ants(uid: int, payload: AntsDelta, request: Request) -> Us
 			ant_final = current_ants - multiplied_damage
 			health_final = current_health
 		else:
-			remaining_damage = abs(ant_final - current_ants) 
+			remaining_damage = multiplied_damage - current_ants
 			ant_final = 0
-			health_final = max(0, current_health -remaining_damage)
+			health_final = max(0, current_health - remaining_damage)
 
 	# Update queries
 	upsert_ants_query = text(
