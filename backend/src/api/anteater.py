@@ -7,8 +7,9 @@ from sqlalchemy.exc import IntegrityError
 
 router = APIRouter(prefix="/api/anteaters", tags=["anteaters"])
 
-ALLOWED_HEALTH_INCREMENTS = {-20, -10, -5, 5, 10, 20}
+ALLOWED_HEALTH_INCREMENTS = {-3, -2, -1, 0, 1, 2}
 MIN_HEALTH = 0
+ANT_HEALTH_MULTIPLIER = 12
 
 IsDeadAlias = Annotated[
 	bool,
@@ -31,6 +32,17 @@ class AnteaterResponse(BaseModel):
 	health: int
 	is_dead: IsDeadAlias
 	uid: int
+
+	model_config = ConfigDict(populate_by_name=True)
+
+
+class AnteaterHealthResponse(BaseModel):
+	id: int
+	name: str
+	health: int
+	is_dead: IsDeadAlias
+	uid: int
+	ants: int
 
 	model_config = ConfigDict(populate_by_name=True)
 
@@ -99,12 +111,12 @@ async def get_anteater(anteater_id: int, request: Request) -> AnteaterResponse:
 
 	return AnteaterResponse.model_validate(row)
 
-@router.patch("/{anteater_id}/health", response_model=AnteaterResponse)
+@router.patch("/{anteater_id}/health", response_model=AnteaterHealthResponse)
 async def update_anteater_health(
 	anteater_id: int,
 	payload: AnteaterHealthDelta,
 	request: Request,
-) -> AnteaterResponse:
+) -> AnteaterHealthResponse:
 	if payload.delta not in ALLOWED_HEALTH_INCREMENTS:
 		raise HTTPException(
 			status_code=status.HTTP_400_BAD_REQUEST,
@@ -113,15 +125,14 @@ async def update_anteater_health(
 			),
 		)
 
-	# Get current anteater and total ant count for user
+	# Get current anteater and user's ant count
 	fetch_query = text(
 		"""
 		SELECT a.id, a.name, a.health, a.is_dead, a.uid,
-		       COALESCE(SUM(ants.count), 0) as total_ants
+		       u.ants as total_ants
 		FROM anteater a
-		LEFT JOIN ants ON ants.uid = a.uid
+		JOIN users u ON u.id = a.uid
 		WHERE a.id = :anteater_id
-		GROUP BY a.id, a.name, a.health, a.is_dead, a.uid
 		"""
 	)
 
@@ -135,19 +146,21 @@ async def update_anteater_health(
 	current_health = current["health"]
 	total_ants = current["total_ants"]
 
+	# All health changes are scaled by multiplier
+	scaled_delta = payload.delta * ANT_HEALTH_MULTIPLIER
+
 	# Calculate damage/healing flow
-	if payload.delta < 0:
+	if scaled_delta < 0:
 		# DAMAGE: ants absorb first, then health takes remainder
-		damage = abs(payload.delta)
+		damage = abs(scaled_delta)
 		ants_absorbed = min(damage, total_ants)
 		remaining_damage = damage - ants_absorbed
 		
 		new_health = max(MIN_HEALTH, current_health - remaining_damage)
 		ant_delta = -ants_absorbed
-		excess_ants = 0
 	else:
 		# HEALING: apply to health, overflow becomes ants
-		new_health = current_health + payload.delta
+		new_health = current_health + scaled_delta
 		excess_ants = max(0, new_health - 100)
 		new_health = min(new_health, 100)
 		ant_delta = excess_ants
@@ -164,23 +177,32 @@ async def update_anteater_health(
 		"""
 	)
 
+	fetch_with_ants_query = text(
+		"""
+		SELECT a.id, a.name, a.health, a.is_dead, a.uid, u.ants
+		FROM anteater a
+		JOIN users u ON u.id = a.uid
+		WHERE a.id = :anteater_id
+		"""
+	)
+
 	update_ants_query = text(
 		"""
-		UPDATE ants
-		SET count = GREATEST(0, count + :ant_delta)
-		WHERE uid = :uid
+		UPDATE users
+		SET ants = GREATEST(0, ants + :ant_delta)
+		WHERE id = :uid
 		"""
 	)
 
 	with request.app.state.db_engine.begin() as connection:
 		# Update anteater health
-		row = connection.execute(
+		connection.execute(
 			update_anteater_query,
 			{
 				"anteater_id": anteater_id,
 				"new_health": new_health,
 			},
-		).mappings().first()
+		)
 
 		# Update ant count if needed
 		if ant_delta != 0:
@@ -189,10 +211,16 @@ async def update_anteater_health(
 				{"uid": uid, "ant_delta": ant_delta},
 			)
 
-	return AnteaterResponse.model_validate(row)
+		# Fetch updated state with ants
+		row = connection.execute(
+			fetch_with_ants_query,
+			{"anteater_id": anteater_id},
+		).mappings().first()
 
-@router.patch("/{anteater_id}/dead", response_model=AnteaterResponse)
-async def dead_anteater(anteater_id: int, request: Request) -> AnteaterResponse:
+	return AnteaterHealthResponse.model_validate(row)
+
+@router.patch("/{anteater_id}/dead", response_model=AnteaterHealthResponse)
+async def dead_anteater(anteater_id: int, request: Request) -> AnteaterHealthResponse:
 	check_query = text(
 		"""
 		SELECT id, name, health, is_dead, uid
@@ -218,10 +246,24 @@ async def dead_anteater(anteater_id: int, request: Request) -> AnteaterResponse:
 		RETURNING id, name, health, is_dead, uid
 		"""
 	)
+
+	fetch_with_ants_query = text(
+		"""
+		SELECT a.id, a.name, a.health, a.is_dead, a.uid, u.ants
+		FROM anteater a
+		JOIN users u ON u.id = a.uid
+		WHERE a.id = :anteater_id
+		"""
+	)
+
 	with request.app.state.db_engine.begin() as connection:
-		row = connection.execute(
+		connection.execute(
 			update_query,
+			{"anteater_id": anteater_id},
+		)
+		row = connection.execute(
+			fetch_with_ants_query,
 			{"anteater_id": anteater_id},
 		).mappings().first()
 
-	return AnteaterResponse.model_validate(row)
+	return AnteaterHealthResponse.model_validate(row)
