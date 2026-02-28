@@ -1,14 +1,9 @@
 import { useEffect, useState } from "react";
+import AnteaterButton from "./anteaterchar/AnteaterButton.jsx";
 import {
   Box,
-  Button,
-  Card,
-  Flex,
   Heading,
-  HStack,
-  Input,
   Text,
-  Textarea,
   VStack,
 } from "@chakra-ui/react";
 
@@ -25,6 +20,7 @@ export default function App() {
           <Text fontSize="sm" color="gray.600">
             A virtual pet to track your AI use!
           </Text>
+          <AnteaterButton />
         </Box>
       </VStack>
     </Box>
