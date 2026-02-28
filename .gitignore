@@ -3,5 +3,7 @@ node_modules
 # package.json
 # vite.config.js
 backend\.env
+.env.local
+.env*.local
 __pycache__/
 backend/src/api/__pycache__/
