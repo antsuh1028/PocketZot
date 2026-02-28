@@ -15,13 +15,14 @@ class UserResponse(BaseModel):
 	id: int
 	name: str
 	email: EmailStr
+	ants: int
 
 
 @router.get("", response_model=list[UserResponse])
 async def list_users(request: Request) -> list[UserResponse]:
 	query = text(
 		"""
-		SELECT id, name, email
+		SELECT *
 		FROM users
 		ORDER BY id
 		"""
