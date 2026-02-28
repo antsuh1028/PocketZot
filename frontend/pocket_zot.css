@@ -16,6 +16,12 @@ body {
 	padding: 14px;
 }
 
+.header {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
 h1 {
 	margin: 0;
 	font-size: 18px;
@@ -25,6 +31,35 @@ h1 {
 	margin: 0;
 	font-size: 13px;
 	color: #555;
+}
+
+.card {
+	border: 1px solid #d6d9dd;
+	border-radius: 10px;
+	padding: 10px;
+	background: #fff;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 8px;
+}
+
+.cardTitle {
+	margin: 0;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.apiStatus {
+	margin: 0;
+	font-size: 12px;
+	color: #3f4750;
 }
 
 .field {
@@ -55,6 +90,21 @@ button {
 
 button:hover {
 	background: #1557b0;
+}
+
+.actions {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px;
+}
+
+.secondary {
+	background: #e8eaed;
+	color: #1f2328;
+}
+
+.secondary:hover {
+	background: #dde1e6;
 }
 
 .status {

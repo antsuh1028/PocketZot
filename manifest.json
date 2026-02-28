@@ -5,7 +5,8 @@
   "description": "A lightweight Chrome extension starter for PocketZot.",
   "action": {
     "default_title": "PocketZot",
-    "default_popup": "frontend/pocket_zot.html"
+    "default_popup": "dist/pocket_zot.html"
   },
-  "permissions": ["storage"]
+  "permissions": ["storage"],
+  "host_permissions": ["http://127.0.0.1:8000/*"]
 }
