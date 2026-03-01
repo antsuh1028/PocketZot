@@ -14,10 +14,10 @@ import {
     const [name, setName] = useState("");
 
     return (
-      <Box minW="375px" minH="400px" bg="gray.50" color="gray.800" px="30px" py="40px" fontFamily="Reddit Mono">
+      <Box minW="350px" minH="auto" bg="gray.50" color="gray.800"  fontFamily="Reddit Mono">
         <VStack gap={4} h="full" justify="center">
             <Box alignSelf="flex-start">
-                <Heading fontFamily="Reddit Mono" size="4xl">Meet</Heading>
+                <Heading fontFamily="Reddit Mono" size="4xl" mb={4}>Meet</Heading>
             </Box>
 
             <Box position="relative">
@@ -46,6 +46,9 @@ import {
                     <Button
                         bg="#72645E"
                         fontSize="lg"
+                        px={6}
+                        py={6}
+                        borderRadius={10}
                     >Next</Button>
                 </VStack>
             </Box>

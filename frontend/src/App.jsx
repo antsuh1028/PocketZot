@@ -63,7 +63,7 @@ export default function App() {
       )}
 
       {/* Page content — mt clears the fixed nav bar */}
-      <Box width="300px" height="auto" mx="auto"  p={3} border="1px solid" borderColor="black" 
+      <Box width="350px" height="auto" mx="auto"  p={3} border="1px solid" borderColor="black" 
         backgroundImage={view === "signup" || view === "login" ? "url('Background.png')" : "none"}
         backgroundSize="cover"
         backgroundPosition="center"
