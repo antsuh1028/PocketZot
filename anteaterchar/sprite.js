@@ -41,7 +41,7 @@ var PZSprite = (function () {
     THROWN  : 999,
   };
 
-  var ASSETS = 'dist/anteaterchar/assets/';
+  var ASSETS = 'dist/';
 
   //FIXME: remove when using real sprite sheet
   var PLACEHOLDER = {
