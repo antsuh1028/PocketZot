@@ -384,6 +384,7 @@
       padding: 14px 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       font-family: -apple-system, sans-serif; max-width: 280px;
       opacity: 0; transform: translateX(320px); transition: all 0.3s ease;
+      cursor: pointer; user-select: none;
     `;
     toast.innerHTML =
       '<div style="font-weight:600;margin-bottom:6px">' +
@@ -396,6 +397,18 @@
           classification.suggestion +
           "</div>"
         : "");
+    
+    // Make toast clickable to view details in popup
+    toast.onclick = function (e) {
+      e.stopPropagation();
+      if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage(
+          { action: "VIEW_CLASSIFICATION", classification: classification },
+          function () {}
+        );
+      }
+    };
+    
     document.body.appendChild(toast);
     setTimeout(function () {
       toast.style.opacity = "1";

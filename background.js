@@ -103,5 +103,19 @@ chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {
     return true; // keep channel open for async sendResponse
   }
 
+  if (message.action === 'VIEW_CLASSIFICATION') {
+    // Store the classification to view
+    chrome.storage.local.set({
+      pocketzot_view_classification: message.classification
+    }, function () {
+      // Open the popup
+      chrome.action.openPopup().catch(function () {
+        // Popup might already be open or user interaction required
+      });
+    });
+    sendResponse({ ok: true });
+    return true;
+  }
+
   return false;
 });

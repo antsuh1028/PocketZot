@@ -7,7 +7,13 @@ export default function BadCommandPage({ user, anteater, classification, onEnd }
   const name = anteater?.name || user?.name || "Georgia";
   const health = anteater?.health ?? 100;
   const ants = user?.ants ?? 0;
-  const suggestion = classification?.suggestion || "Try asking a more specific question to deepen your understanding!";
+  const value = Number(classification?.value);
+  const rawSuggestion = (classification?.suggestion || "").trim();
+  const fallbackSuggestion =
+    value === -3
+      ? "Try writing your own explanation first, then ask the AI to critique and improve it."
+      : "Try asking a more specific question to deepen your understanding!";
+  const suggestion = rawSuggestion || fallbackSuggestion;
 
   return (
     <Box bg="#FFA0A0" minH="100%" p={5}>
