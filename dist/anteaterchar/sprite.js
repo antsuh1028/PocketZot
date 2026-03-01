@@ -119,8 +119,35 @@ var PZSprite = (function () {
       el.style.backgroundRepeat = 'no-repeat';
     }
 
+    this._hatEl = document.createElement('div');
+    this._hatEl.id = 'pocketzot-hat';
+    this._hatEl.style.cssText = 'position:absolute;top:-25px;left:50%;transform:translateX(-50%);width:100%;height:100%;pointer-events:none;display:flex;align-items:flex-start;justify-content:center;';
+    el.appendChild(this._hatEl);
     this.el = el;
     document.body.appendChild(el);
+    this._updateHatOverlay();
+    if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
+      var self = this;
+      chrome.storage.onChanged.addListener(function (changes, area) {
+        if (area === 'local' && changes.pocketzot_equipped_hat) self._updateHatOverlay();
+      });
+    }
+  };
+
+  Sprite.prototype._updateHatOverlay = function () {
+    if (!this._hatEl) return;
+    if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
+    var self = this;
+    chrome.storage.local.get('pocketzot_equipped_hat', function (data) {
+      var hat = data && data.pocketzot_equipped_hat;
+      self._hatEl.innerHTML = '';
+      if (hat && hat.image_url) {
+        var img = document.createElement('img');
+        img.src = resolveAssetPath(hat.image_url);
+        img.style.cssText = 'max-width:120%;max-height:80px;object-fit:contain;transform-origin:bottom center;';
+        self._hatEl.appendChild(img);
+      }
+    });
   };
 
   Sprite.prototype.unmount = function () {

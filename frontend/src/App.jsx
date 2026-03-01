@@ -142,7 +142,13 @@ export default function App() {
           <HowSheHelpsPage onNext={() => go("main")} />
         )}
         {view === "main" && <MainPage user={user} onShop={() => go("shop")} />}
-        {view === "shop" && <ShopPage user={user} onBack={() => go("main")} />}
+        {view === "shop" && (
+          <ShopPage
+            user={user}
+            onBack={() => go("main")}
+            onUserUpdate={(u) => setUser(u)}
+          />
+        )}
       </Box>
     </Box>
   );
