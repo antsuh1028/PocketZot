@@ -53,6 +53,31 @@ export default function App() {
     go("meet");
   };
 
+  const handleMeetNext = (name) => {
+    if (!user || !name.trim()) {
+      go("whatisshe");
+      return;
+    }
+
+    // Patch anteater name
+    fetch(`${BACKEND_URL}/api/anteaters/user/${user.id}/name`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim() }),
+    })
+      .then((r) => {
+        if (r.ok) return r.json();
+        throw new Error("Failed to update name");
+      })
+      .then(() => {
+        go("whatisshe");
+      })
+      .catch((err) => {
+        console.error("Error updating anteater name:", err);
+        go("whatisshe");
+      });
+  };
+
   return (
     <Box borderRadius="20px">
       {/* Fixed nav — out of flow, never affects page width */}
@@ -133,7 +158,7 @@ export default function App() {
           />
         )}
         {view === "meet" && (
-          <MeetPage user={user} onNext={() => go("whatisshe")} />
+          <MeetPage user={user} onNext={handleMeetNext} />
         )}
         {view === "whatisshe" && (
           <WhatIsShePage onNext={() => go("howshehelps")} />

@@ -258,6 +258,7 @@
           var data = response.data;
           console.log("[PocketZot] Classification:", data);
           storeClassification(promptText, data);
+          updateAnteaterHealth(data.value);
           showClassificationToast(data);
           var pet = getAnteater();
           if (pet && pet.isActive && pet.isActive() && pet.standStillFor) {
@@ -267,6 +268,23 @@
           console.error("[PocketZot] classify error:", response ? response.error : "No response");
         }
       },
+    );
+  }
+
+  function updateAnteaterHealth(classificationValue) {
+    chrome.runtime.sendMessage(
+      { action: "UPDATE_HEALTH", delta: classificationValue },
+      function (response) {
+        if (chrome.runtime.lastError) {
+          console.error("[PocketZot] Health update error:", chrome.runtime.lastError.message);
+          return;
+        }
+        if (response && response.ok) {
+          console.log("[PocketZot] Anteater health updated:", response.data);
+        } else {
+          console.error("[PocketZot] Health update error:", response ? response.error : "No response");
+        }
+      }
     );
   }
 

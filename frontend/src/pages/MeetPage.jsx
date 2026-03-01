@@ -114,7 +114,7 @@ export default function MeetPage({ onNext }) {
             fontSize="lg"
             minH="34px"
             px={4}
-            onClick={onNext}
+            onClick={() => onNext(name)}
             _hover={{ filter: "brightness(0.95)" }}
             _active={{ transform: "translateY(1px)" }}
           >

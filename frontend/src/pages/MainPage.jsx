@@ -13,7 +13,24 @@ export default function MainPage({ user, onShop }) {
     if (!user) return;
     fetch(`${BACKEND_URL}/api/anteaters`)
       .then((r) => r.json())
-      .then((list) => setAnteater(list.find((a) => a.uid === user.id) || null))
+      .then((list) => {
+        const found = list.find((a) => a.uid === user.id) || null;
+        setAnteater(found);
+        
+        // Store anteater details and user ID in chrome storage for background script
+        if (found && chrome && chrome.storage) {
+          chrome.storage.local.set({
+            userId: user.id,
+            anteaterDetails: {
+              id: found.id,
+              name: found.name,
+              health: found.health,
+              isDead: found.isDead,
+              uid: found.uid
+            }
+          });
+        }
+      })
       .catch(() => {});
   }, [user]);
 
