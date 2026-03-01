@@ -69,6 +69,20 @@ export default function MainPage({ user, onShop, onStart }) {
     }
   };
 
+  const handleLogout = () => {
+    // Clear localStorage
+    localStorage.removeItem("pocketzot_user");
+    console.log('[PocketZot] User logged out');
+    
+    // Clear chrome.storage
+    if (typeof chrome !== "undefined" && chrome.storage?.local) {
+      chrome.storage.local.remove(["userId", "anteaterDetails", "pocketzot_classifications", "pocketzot_equipped_hat"]);
+    }
+    
+    // Force reload to go back to welcome page
+    window.location.reload();
+  };
+
   const name = anteater?.name || user?.name || "Georgia";
   const health = anteater?.health ?? 100;
   const ants = user?.ants ?? 0;
@@ -323,6 +337,18 @@ export default function MainPage({ user, onShop, onStart }) {
               </defs>
             </svg>
             {isSpawned ? "Stop Agent" : "Start"}
+          </PixBtn>
+
+          {/* Logout button */}
+          <PixBtn
+            fullWidth
+            variant="default"
+            mt={3}
+            bg="#8a7a6a"
+            borderRadius="8px"
+            onClick={handleLogout}
+          >
+            Logout
           </PixBtn>
         </Box>
       </Box>

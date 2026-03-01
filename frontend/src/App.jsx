@@ -59,6 +59,7 @@ useEffect(() => {
   const initializeApp = async () => {
     try {
       const savedUser = localStorage.getItem("pocketzot_user");
+      console.log('[PocketZot] App init - localStorage.pocketzot_user:', savedUser);
       if (savedUser) {
         const u = JSON.parse(savedUser);
         console.log('[PocketZot] App init - Restored user:', u.id, u.name);
