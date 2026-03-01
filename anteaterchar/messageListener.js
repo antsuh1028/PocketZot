@@ -113,14 +113,20 @@
     button.onclick = function() {
       console.log('[PocketZot] Start button clicked');
       
-      // Clear previous session data
+      // Reset ALL session state before starting
       processedPrompts.clear();
+      seenNodes = new WeakSet();
+      lastPromptCount = 0;
+      if (promptObserver) {
+        promptObserver.disconnect();
+        promptObserver = null;
+      }
       localStorage.removeItem('pocketzot_classifications');
       console.log('[PocketZot] Cleared previous session data');
       
       getAnteater().spawn();
       
-      // Start monitoring prompts
+      // Start monitoring prompts — only NOW, after user clicks Start
       startPromptMonitoring();
       
       // Close the popover after spawning
@@ -215,7 +221,8 @@
   // Prompt monitoring system
   var lastPromptCount = 0;
   var promptObserver = null;
-  var processedPrompts = new Set(); // Track prompts we've already processed
+  var processedPrompts = new Set(); // Track prompt text hashes we've already classified
+  var seenNodes = new WeakSet();    // Track DOM nodes we've already seen — immune to count drift
 
   function detectPlatform() {
     var hostname = window.location.hostname;
@@ -229,25 +236,30 @@
   function getPromptSelectors(platform) {
     var selectors = {
       chatgpt: {
-        // ChatGPT user messages are in divs with data-message-author-role="user"
         messageContainer: 'main',
+        // data-message-author-role is only set to "user" on user turns
         userMessage: '[data-message-author-role="user"]',
         inputField: 'textarea[placeholder*="Message"]'
       },
       claude: {
-        // Claude user messages
-        messageContainer: 'main',
-        userMessage: '[data-test-render-count]',
+        // Claude.ai uses a scrollable div, not <main>
+        messageContainer: '[data-testid="conversation-turn-list"]',
+        messageContainerFallbacks: [
+          '[data-testid="conversation-turn-list"]',
+          '.flex-1.overflow-y-auto',
+          '#thread-content',
+          'div[class*="ConversationContainer"]',
+          'div[class*="conversation"]',
+        ],
+        userMessage: '[data-testid="user-message"]',
         inputField: 'div[contenteditable="true"]'
       },
       gemini: {
-        // Gemini user messages
         messageContainer: 'main',
         userMessage: '.query-content',
         inputField: 'textarea'
       },
       perplexity: {
-        // Perplexity user messages
         messageContainer: 'main',
         userMessage: '[class*="UserQuery"]',
         inputField: 'textarea'
@@ -422,63 +434,66 @@
     
     if (!selectors) return;
 
-    // Mark all existing prompts as already processed
+    // Snapshot all currently-visible user message nodes as "already seen" —
+    // we register their identity so we never classify them, even if the DOM
+    // later mutates and shifts indices around.
     var currentMessages = document.querySelectorAll(selectors.userMessage);
-    lastPromptCount = currentMessages.length;
-    
-    console.log('[PocketZot] Found', currentMessages.length, 'existing messages to mark as processed');
-    
-    // Add all current prompts to processed set
     for (var i = 0; i < currentMessages.length; i++) {
-      var existingPrompt = extractPromptText(currentMessages[i], platform);
-      if (existingPrompt) {
-        var hash = existingPrompt.trim().toLowerCase();
-        processedPrompts.add(hash);
-        console.log('[PocketZot] Marked prompt', i + 1, 'as processed:', existingPrompt.substring(0, 50) + '...');
-      }
+      seenNodes.add(currentMessages[i]);
     }
-    
-    console.log('[PocketZot] ✓ Monitoring started. Marked', processedPrompts.size, 'existing prompts as processed');
-    console.log('[PocketZot] ✓ Only NEW prompts submitted after this will be classified');
+    lastPromptCount = currentMessages.length; // kept for logging only
+
+    console.log('[PocketZot] Baseline:', lastPromptCount, 'existing messages — these will NOT be classified');
+    console.log('[PocketZot] ✓ Only prompts sent AFTER clicking Start will be classified');
     console.log('[PocketZot] To view stored classifications, run: window.PocketZotStorage.getClassifications()');
-    // console.log('[PocketZot]   window.PocketZotStorage.getStats()');
 
     // Use MutationObserver to watch for new messages
     var targetNode = document.querySelector(selectors.messageContainer);
-    
+
     function checkForNewPrompts() {
       var userMessages = document.querySelectorAll(selectors.userMessage);
-      
-      if (userMessages.length > lastPromptCount) {
-        // New message(s) detected
-        console.log('[PocketZot] 📝 DOM changed: Found', userMessages.length, 'total messages (was', lastPromptCount + ')');
-        for (var i = lastPromptCount; i < userMessages.length; i++) {
-          var promptText = extractPromptText(userMessages[i], platform);
-          if (promptText) {
-            onPromptDetected(promptText);
-          }
+
+      for (var i = 0; i < userMessages.length; i++) {
+        var node = userMessages[i];
+        if (seenNodes.has(node)) continue; // already processed or pre-existing
+        seenNodes.add(node);
+
+        var promptText = extractPromptText(node, platform);
+        if (promptText) {
+          console.log('[PocketZot] 📝 New user node detected');
+          onPromptDetected(promptText);
         }
-        lastPromptCount = userMessages.length;
       }
     }
 
-    // Set up observer to watch for DOM changes
-    if (targetNode) {
-      promptObserver = new MutationObserver(function(mutations) {
-        checkForNewPrompts();
-      });
-
-      promptObserver.observe(targetNode, {
-        childList: true,
-        subtree: true
-      });
-
-      console.log('[PocketZot] Prompt observer initialized');
-    } else {
-      console.log('[PocketZot] Could not find message container, retrying...');
-      // Retry after a delay if the page hasn't fully loaded
-      setTimeout(startPromptMonitoring, 2000);
+    // Try the primary selector, then fallbacks
+    var targetNode = document.querySelector(selectors.messageContainer);
+    if (!targetNode && selectors.messageContainerFallbacks) {
+      for (var f = 0; f < selectors.messageContainerFallbacks.length; f++) {
+        targetNode = document.querySelector(selectors.messageContainerFallbacks[f]);
+        if (targetNode) {
+          console.log('[PocketZot] Found container via fallback:', selectors.messageContainerFallbacks[f]);
+          break;
+        }
+      }
     }
+
+    // If still not found, observe <body> as a last resort — broad but always works
+    if (!targetNode) {
+      targetNode = document.body;
+      console.log('[PocketZot] ⚠️ Could not find specific message container, falling back to <body>');
+    }
+
+    promptObserver = new MutationObserver(function() {
+      checkForNewPrompts();
+    });
+
+    promptObserver.observe(targetNode, {
+      childList: true,
+      subtree: true,
+    });
+
+    console.log('[PocketZot] ✓ Prompt observer attached to:', targetNode.tagName || targetNode);
   }
 
   // Show popover when content script loads
@@ -489,13 +504,8 @@
     console.error('[PocketZot] Popover creation failed:', err);
   }
 
-  // Start monitoring for prompts
-  try {
-    console.log('[PocketZot] Initializing prompt monitoring...');
-    startPromptMonitoring();
-  } catch (err) {
-    console.error('[PocketZot] Prompt monitoring failed:', err);
-  }
+  // NOTE: startPromptMonitoring() is intentionally NOT called here.
+  // It is only called when the user clicks the Start button in the popover.
 
   // Expose helper functions globally for popup/frontend access
   window.PocketZotStorage = {
