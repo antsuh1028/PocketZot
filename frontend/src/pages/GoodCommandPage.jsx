@@ -1,32 +1,12 @@
-import { useEffect, useState } from "react";
 import { Box, Text, Image, VStack, HStack, Button } from "@chakra-ui/react";
 
 const FONT = "'Press Start 2P', monospace";
 const REDDIT = "Reddit Mono, monospace";
-const BACKEND_URL = "http://127.0.0.1:8000";
 
 export default function GoodCommandPage({ user, anteater, classification, onEnd }) {
-  const [freshAnteater, setFreshAnteater] = useState(anteater);
-
-  // Fetch fresh data when component mounts to show updated health/ants
-  useEffect(() => {
-    if (!user?.id) return;
-
-    // Fetch updated anteater (now includes ants from backend)
-    fetch(`${BACKEND_URL}/api/anteaters`)
-      .then((r) => r.json())
-      .then((list) => {
-        const updated = list.find((a) => a.uid === user.id);
-        if (updated) {
-          setFreshAnteater(updated);
-        }
-      })
-      .catch(() => {});
-  }, [user?.id]);
-
-  const name = freshAnteater?.name || user?.name || "Georgia";
-  const health = freshAnteater?.health ?? 100;
-  const ants = freshAnteater?.ants ?? 0;
+  const name = anteater?.name || user?.name || "Georgia";
+  const health = anteater?.health ?? 100;
+  const ants = user?.ants ?? 0;
   const value = Number(classification?.value);
   const rawSuggestion = (classification?.suggestion || "").trim();
   const fallbackSuggestion =

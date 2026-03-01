@@ -85,7 +85,7 @@ export default function MainPage({ user, onShop, onStart }) {
 
   const name = anteater?.name || user?.name || "Georgia";
   const health = anteater?.health ?? 100;
-  const ants = anteater?.ants ?? 0;
+  const ants = user?.ants ?? 0;
 
   return (
     <Box>
