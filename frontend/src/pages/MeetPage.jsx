@@ -10,60 +10,21 @@ import {
 import "../index.css";
 import { useState } from "react";
 
-const FONT = "'Press Start 2P', monospace";
-
-function TitleBar() {
-  return (
-    <Box
-      bg="var(--panel)"
-      borderBottom="3px solid var(--border)"
-      px={3}
-      py="5px"
-      display="flex"
-      alignItems="center"
-      justifyContent="space-between"
-      mt={8}
-    >
-      <Text fontFamily={FONT} fontSize="9px" color="var(--dark)">
-        Pocket Zot
-      </Text>
-      <Box display="flex" gap="4px">
-        {["◀", "✕"].map((s) => (
-          <Box
-            key={s}
-            w="16px"
-            h="16px"
-            bg="var(--btn-bg)"
-            border="2px solid var(--btn-border)"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            fontSize="8px"
-            cursor="pointer"
-            color="var(--dark)"
-            fontFamily={FONT}
-          >
-            {s}
-          </Box>
-        ))}
-      </Box>
-    </Box>
-  );
-}
+const FONT = "Reddit Mono, monospace";
 
 export default function MeetPage({ onNext }) {
   const [name, setName] = useState("");
 
   return (
     <Box bg="var(--bg)" border="3px" h="590px">
-      <TitleBar />
-      <Box p={5}>
+      <VStack p={5} gap={4}>
         <Text
           fontFamily={FONT}
           fontSize="4xl"
           color="var(--dark)"
           textAlign="left"
           ml={6}
+          alignSelf=""
         //   mb={5}
         >
           Meet
@@ -114,14 +75,14 @@ export default function MeetPage({ onNext }) {
             fontSize="lg"
             minH="34px"
             px={4}
-            onClick={onNext}
+            onClick={() => onNext(name)}
             _hover={{ filter: "brightness(0.95)" }}
             _active={{ transform: "translateY(1px)" }}
           >
             Next
           </Button>
         </Box>
-      </Box>
+      </VStack>
     </Box>
   );
 }

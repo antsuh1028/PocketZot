@@ -5,9 +5,15 @@ import LoginPage from "./pages/LoginPage.jsx";
 import SignupPage from "./pages/SignupPage.jsx";
 import MeetPage from "./pages/MeetPage.jsx";
 import WhatIsShePage from "./pages/WhatIsShePage.jsx";
-import HowSheHelpsPage from "./pages/HowshehelpsPage.jsx";
+import HowSheHelpsPage from "./pages/HowShehelpsPage.jsx";
 import MainPage from "./pages/MainPage.jsx";
 import ShopPage from "./pages/ShopPage.jsx";
+import IdlePage from "./pages/IdlePage.jsx";
+import GoodCommandPage from "./pages/GoodCommandPage.jsx";
+import BadCommandPage from "./pages/BadCommandPage.jsx";
+import StudySummaryPage from "./pages/StudySummaryPage.jsx";
+import Header from "./components/Header.jsx";
+import Footer from "./components/Footer.jsx";
 
 const DEV_MODE = true;
 const BACKEND_URL = "http://127.0.0.1:8000";
@@ -34,6 +40,10 @@ const PAGES = [
   "howshehelps",
   "main",
   "shop",
+  "idle",
+  "good",
+  "bad",
+  "summary"
 ];
 
 export default function App() {
@@ -65,6 +75,31 @@ export default function App() {
   const handleLogin = (u) => {
     setUser(u);
     go("meet");
+  };
+
+  const handleMeetNext = (name) => {
+    if (!user || !name.trim()) {
+      go("whatisshe");
+      return;
+    }
+
+    // Patch anteater name
+    fetch(`${BACKEND_URL}/api/anteaters/user/${user.id}/name`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim() }),
+    })
+      .then((r) => {
+        if (r.ok) return r.json();
+        throw new Error("Failed to update name");
+      })
+      .then(() => {
+        go("whatisshe");
+      })
+      .catch((err) => {
+        console.error("Error updating anteater name:", err);
+        go("whatisshe");
+      });
   };
 
   return (
@@ -130,19 +165,10 @@ export default function App() {
         </Box>
       )}
 
+      <Header />
       {/* Page content — mt clears the fixed nav bar */}
-      <Box
-        width="350px"
-        height="full"
-        mx="auto"
-        border="3px solid"
-        borderColor="black"
-        borderRadius="8px"
-        backgroundImage={
-          view === "signup" || view === "login"
-            ? "url('Background.png')"
-            : "none"
-        }
+      <Box width="375px" maxHeight="400" mx="auto" border="1px solid" borderColor="black" 
+        backgroundImage={view === "signup" || view === "login" ? "url('Background.png')" : "none"}
         backgroundSize="cover"
         backgroundPosition="center"
         minHeight={view === "signup" || view === "login" ? "100vh" : "auto"}
@@ -166,13 +192,29 @@ export default function App() {
           />
         )}
         {view === "meet" && (
-          <MeetPage user={user} onNext={() => go("whatisshe")} />
+          <MeetPage user={user} onNext={handleMeetNext} />
         )}
         {view === "whatisshe" && (
           <WhatIsShePage onNext={() => go("howshehelps")} />
         )}
         {view === "howshehelps" && (
           <HowSheHelpsPage onNext={() => go("main")} />
+        )}
+        {view === "idle" && (
+          <IdlePage
+          />
+        )}
+        {view === "good" && (
+          <GoodCommandPage
+          />
+        )}
+        {view === "bad" && (
+          <BadCommandPage
+          />
+        )}
+        {view === "summary" && (
+          <StudySummaryPage
+          />
         )}
         {view === "main" && <MainPage user={user} onShop={() => go("shop")} />}
         {view === "shop" && (
