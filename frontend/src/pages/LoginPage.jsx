@@ -5,46 +5,6 @@ import { PixBtn } from "./WelcomePage.jsx";
 const FONT = "'Press Start 2P', monospace";
 const BACKEND_URL = "http://127.0.0.1:8000";
 
-function TitleBar() {
-  return (
-    <Box
-      bg="var(--panel)"
-      borderBottom="3px solid var(--border)"
-      px={3}
-      py="5px"
-      display="flex"
-      alignItems="center"
-      justifyContent="space-between"
-      mt={8}
-    >
-      <Text fontFamily={FONT} fontSize="9px" color="var(--dark)">
-        Pocket Zot
-      </Text>
-      <Box display="flex" gap="4px">
-        {["◀", "✕"].map((s) => (
-          <Box
-            key={s}
-            w="16px"
-            h="16px"
-            bg="var(--btn-bg)"
-            border="2px solid var(--btn-border)"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            fontSize="8px"
-            cursor="pointer"
-            color="var(--dark)"
-            fontFamily={FONT}
-            
-          >
-            {s}
-          </Box>
-        ))}
-      </Box>
-    </Box>
-  );
-}
-
 function PixInput({ label, type = "text", value, onChange }) {
   return (
     <Box mb={4}>
@@ -98,7 +58,6 @@ export default function LoginPage({ onSuccess, onSwitchToSignup }) {
 
   return (
     <Box bg="var(--bg)" border="3px">
-      <TitleBar />
       <Box p={5}>
         <Text
           fontFamily={FONT}
