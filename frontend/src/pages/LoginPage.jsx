@@ -71,7 +71,7 @@ export default function LoginPage({ onSuccess, onSwitchToSignup }) {
 
         <Box display="flex" justifyContent="flex-end" mb={-2}>
           <Image
-            src="Idle State.png"
+            src="IdleSmooth.png"
             boxSize="56px"
             objectFit="contain"
             style={{ imageRendering: "pixelated" }}

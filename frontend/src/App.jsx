@@ -5,10 +5,13 @@ import LoginPage from "./pages/LoginPage.jsx";
 import SignupPage from "./pages/SignupPage.jsx";
 import MeetPage from "./pages/MeetPage.jsx";
 import WhatIsShePage from "./pages/WhatIsShePage.jsx";
-import HowSheHelpsPage from "./pages/HowshehelpsPage.jsx";
+import HowSheHelpsPage from "./pages/HowShehelpsPage.jsx";
 import MainPage from "./pages/MainPage.jsx";
 import ShopPage from "./pages/ShopPage.jsx";
 import IdlePage from "./pages/IdlePage.jsx";
+import GoodCommandPage from "./pages/GoodCommandPage.jsx";
+import BadCommandPage from "./pages/BadCommandPage.jsx";
+import StudySummaryPage from "./pages/StudySummaryPage.jsx";
 import Header from "./components/Header.jsx";
 import Footer from "./components/Footer.jsx";
 
@@ -23,7 +26,10 @@ const PAGES = [
   "howshehelps",
   "main",
   "shop",
-  "idle"
+  "idle",
+  "good",
+  "bad",
+  "summary"
 ];
 
 export default function App() {
@@ -138,6 +144,18 @@ export default function App() {
         )}
         {view === "idle" && (
           <IdlePage
+          />
+        )}
+        {view === "good" && (
+          <GoodCommandPage
+          />
+        )}
+        {view === "bad" && (
+          <BadCommandPage
+          />
+        )}
+        {view === "summary" && (
+          <StudySummaryPage
           />
         )}
         {view === "main" && <MainPage user={user} onShop={() => go("shop")} />}

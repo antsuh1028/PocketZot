@@ -50,7 +50,7 @@
 
           <Box display="flex" justifyContent="flex-start" mb={-2}>
             <Image
-              src="Idle State.png"
+              src="IdleSmooth.png"
               boxSize="56px"
               objectFit="contain"
               style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }}
