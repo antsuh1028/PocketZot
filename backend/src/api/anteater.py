@@ -51,6 +51,10 @@ class AnteaterHealthDelta(BaseModel):
 	delta: int
 
 
+class AnteaterNameUpdate(BaseModel):
+	name: str
+
+
 @router.get("", response_model=list[AnteaterResponse])
 async def list_anteaters(request: Request) -> list[AnteaterResponse]:
 	query = text(
@@ -267,3 +271,72 @@ async def dead_anteater(anteater_id: int, request: Request) -> AnteaterHealthRes
 		).mappings().first()
 
 	return AnteaterHealthResponse.model_validate(row)
+
+
+@router.patch("/{anteater_id}/name", response_model=AnteaterResponse)
+async def update_anteater_name(
+	anteater_id: int,
+	payload: AnteaterNameUpdate,
+	request: Request,
+) -> AnteaterResponse:
+	update_query = text(
+		"""
+		UPDATE anteater
+		SET name = :name
+		WHERE id = :anteater_id AND is_dead = FALSE
+		RETURNING id, name, health, is_dead, uid
+		"""
+	)
+	
+	with request.app.state.db_engine.begin() as connection:
+		row = connection.execute(
+			update_query,
+			{"anteater_id": anteater_id, "name": payload.name},
+		).mappings().first()
+
+	if row is None:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anteater not found")
+
+	return AnteaterResponse.model_validate(row)
+
+
+@router.patch("/user/{uid}/name", response_model=AnteaterResponse)
+async def update_anteater_name_by_uid(
+	uid: int,
+	payload: AnteaterNameUpdate,
+	request: Request,
+) -> AnteaterResponse:
+	# First, find the anteater for this user (get the first one by ID)
+	find_query = text(
+		"""
+		SELECT id, name, health, is_dead, uid
+		FROM anteater
+		WHERE uid = :uid
+		ORDER BY id ASC
+		LIMIT 1
+		"""
+	)
+
+	with request.app.state.db_engine.connect() as connection:
+		anteater = connection.execute(find_query, {"uid": uid}).mappings().first()
+
+	if anteater is None:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No anteater found for this user")
+
+	# Now update only that anteater
+	update_query = text(
+		"""
+		UPDATE anteater
+		SET name = :name
+		WHERE id = :anteater_id
+		RETURNING id, name, health, is_dead, uid
+		"""
+	)
+
+	with request.app.state.db_engine.begin() as connection:
+		row = connection.execute(
+			update_query,
+			{"anteater_id": anteater["id"], "name": payload.name},
+		).mappings().first()
+
+	return AnteaterResponse.model_validate(row)

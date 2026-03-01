@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -22,7 +21,7 @@ class UserResponse(BaseModel):
 async def list_users(request: Request) -> list[UserResponse]:
 	query = text(
 		"""
-		SELECT *
+		SELECT id, name, email, COALESCE(ants, 0) AS ants
 		FROM users
 		ORDER BY id
 		"""
@@ -38,20 +37,16 @@ async def create_user(payload: UserCreate, request: Request) -> UserResponse:
 		"""
 		INSERT INTO users (name, email)
 		VALUES (:name, :email)
-		RETURNING id, name, email, ants
+		ON CONFLICT (email)
+		DO UPDATE SET name = EXCLUDED.name
+		RETURNING id, name, email, COALESCE(ants, 0) AS ants
 		"""
 	)
-	try:
-		with request.app.state.db_engine.begin() as connection:
-			row = connection.execute(
-				query,
-				{"name": payload.name, "email": str(payload.email)},
-			).mappings().one()
-	except IntegrityError as exc:
-		raise HTTPException(
-			status_code=status.HTTP_400_BAD_REQUEST,
-			detail="User with this email may already exist",
-		) from exc
+	with request.app.state.db_engine.begin() as connection:
+		row = connection.execute(
+			query,
+			{"name": payload.name, "email": str(payload.email)},
+		).mappings().one()
 
 	return UserResponse.model_validate(row)
 
@@ -60,7 +55,7 @@ async def create_user(payload: UserCreate, request: Request) -> UserResponse:
 async def get_user(user_id: int, request: Request) -> UserResponse:
 	query = text(
 		"""
-		SELECT id, name, email, ants
+		SELECT id, name, email, COALESCE(ants, 0) AS ants
 		FROM users
 		WHERE id = :user_id
 		"""
@@ -77,7 +72,7 @@ async def get_user(user_id: int, request: Request) -> UserResponse:
 async def get_user_by_email(email: str, request: Request) -> UserResponse:
 	query = text(
 		"""
-		SELECT id, name, email, ants
+		SELECT id, name, email, COALESCE(ants, 0) AS ants
 		FROM users
 		WHERE email = :email
 		"""

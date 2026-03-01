@@ -1,39 +1,82 @@
-import {
-    Box,
-    Button,
-    Heading,
-    Image,
-    Text,
-    VStack,
-  } from "@chakra-ui/react";
-  
-  import "../index.css";
-  
-  export default function WelcomePage({ onSignUp, onLogIn }) {
-    return (
-      <Box bg="#72645E" p={4} h="full">
-        <VStack align="stretch" gap={4} px={8} maxW="350px" mx="auto" justify="center" alignItems="center">
-          <Text fontSize="2xl" pt={4} textAlign="center" fontFamily="Reddit Mono" fontWeight="500">Send a command!</Text>
-          <Box py={4} px={4} border="solid black 2px" bg="white" borderRadius={10} width="300px">
-            <VStack display="flex" flexDirection="column" justifyContent="center" alignItems="center">
-                <Image src="IdleSmooth.png" width="150px"/>
-                <Text fontFamily="'Press Start 2P'" fontSize="3xl" width="full" textAlign="center">Georgia</Text>
-                <Box display="flex" justifyContent="space-between" bg="#DBB166" border="solid black 2px" borderRadius={4} width="full" p="15px" fontFamily="'Press Start 2P'">
-                    <Box>
-                        <Text fontWeight="500" fontSize="sm">Health</Text>
-                    </Box>
-                    <Box display="flex" flexDirection="column">
-                        <Text fontWeight="500" fontSize="sm">Ants</Text>
-                        <Box>
-                            <Image src="Normal Ant.png" width="30px"/>
-                        </Box>
-                    </Box>
-                </Box>
-            </VStack>
-          </Box>
-          <Button fontFamily="'Press Start 2P'" fontSize="2xl" bg="#A90000" border="solid black 2px" borderRadius="lg" width="80%" p="15px">End</Button>
-        </VStack>
-      </Box>
-    );
-  }
-  
+import { Box, Text, Image, VStack, HStack, Button } from "@chakra-ui/react";
+
+const FONT = "'Press Start 2P', monospace";
+const REDDIT = "Reddit Mono, monospace";
+
+export default function IdlePage({ user, anteater, onEnd }) {
+  const name = anteater?.name || user?.name || "Georgia";
+  const health = anteater?.health ?? 100;
+  const ants = user?.ants ?? 0;
+
+  return (
+    <Box bg="#72645E" minH="100%" p={5}>
+      <VStack gap={5} align="center">
+
+        <Text fontFamily={REDDIT} fontSize="2xl" color="white" fontWeight="600" pt={2} textAlign="center">
+          Send a command!
+        </Text>
+
+        {/* Anteater card */}
+        <Box bg="white" border="2px solid black" borderRadius={10} p={4} w="full">
+          <VStack gap={3} align="center">
+            <Image src="IdleSmooth.png" w="130px" />
+
+            <Text fontFamily={FONT} fontSize="xl" color="#3a2e22" textAlign="center">
+              {name}
+            </Text>
+
+            {/* Stats row */}
+            <Box
+              bg="#DBB166"
+              border="2px solid black"
+              borderRadius={4}
+              w="full"
+              p={3}
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+            >
+              {/* Health */}
+              <VStack gap={1} align="flex-start">
+                <Text fontFamily={FONT} fontSize="xs" color="#3a2e22">Health</Text>
+                <HStack gap={2}>
+                  <Text fontSize="14px">❤️</Text>
+                  <Box w="80px" h="8px" bg="#8a7a6a" borderRadius={2}>
+                    <Box w={`${health}%`} h="100%" bg="#7ab86a" borderRadius={2} />
+                  </Box>
+                </HStack>
+              </VStack>
+
+              {/* Ants */}
+              <VStack gap={1} align="center">
+                <Text fontFamily={FONT} fontSize="xs" color="#3a2e22">Ants</Text>
+                <HStack gap={1}>
+                  <Text fontFamily={FONT} fontSize="sm" color="#3a2e22">{ants}</Text>
+                  <Image src="NakedAnt.png" boxSize="24px" />
+                </HStack>
+              </VStack>
+            </Box>
+          </VStack>
+        </Box>
+
+        {/* End button */}
+        <Button
+          fontFamily={FONT}
+          fontSize="lg"
+          bg="#A90000"
+          color="white"
+          border="2px solid black"
+          borderRadius="lg"
+          w="80%"
+          py={6}
+          onClick={onEnd}
+          _hover={{ bg: "#8a0000" }}
+          _active={{ transform: "translateY(1px)" }}
+        >
+          End
+        </Button>
+
+      </VStack>
+    </Box>
+  );
+}
