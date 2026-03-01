@@ -1,5 +1,5 @@
 import { resolve, join } from "node:path";
-import { mkdirSync, copyFileSync } from "node:fs";
+import { mkdirSync, copyFileSync, readdirSync, statSync } from "node:fs";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -10,7 +10,23 @@ function copyContentScripts() {
       const srcDir = resolve(__dirname, "anteaterchar");
       const destDir = resolve(__dirname, "dist/anteaterchar");
       mkdirSync(destDir, { recursive: true });
-      mkdirSync(join(destDir, "assets"), { recursive: true });
+      const assetsSrc = join(srcDir, "assets");
+      const assetsDest = join(destDir, "assets");
+      mkdirSync(assetsDest, { recursive: true });
+      try {
+        if (statSync(assetsSrc).isDirectory()) {
+          const assetFiles = readdirSync(assetsSrc);
+          assetFiles.forEach((f) => {
+            const srcPath = join(assetsSrc, f);
+            if (statSync(srcPath).isFile()) {
+              copyFileSync(srcPath, join(assetsDest, f));
+              console.log(`[PocketZot] copied assets/${f} → dist/anteaterchar/assets/`);
+            }
+          });
+        }
+      } catch {
+        // assets folder may not exist yet
+      }
       const files = [
         "physics.js",
         "stateMachine.js",
