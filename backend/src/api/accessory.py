@@ -408,6 +408,14 @@ async def get_user_accessory(id: int, request: Request) -> UserAccessoryResponse
 	return UserAccessoryResponse.model_validate(row)
 
 
+# Clear all user accessories (dev/testing)
+@router.post("/user/{uid}/clear-inventory", status_code=status.HTTP_204_NO_CONTENT)
+async def clear_user_inventory(uid: int, request: Request) -> None:
+	query = text("DELETE FROM has_accessory WHERE uid = :uid")
+	with request.app.state.db_engine.begin() as connection:
+		connection.execute(query, {"uid": uid})
+
+
 # Delete/sell user accessory
 @router.delete("/user-accessories/{id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user_accessory(id: int, request: Request) -> None:

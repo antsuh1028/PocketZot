@@ -22,6 +22,7 @@ CREATE TABLE accessories (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     price INT NOT NULL,
+    type VARCHAR(50) NOT NULL DEFAULT 'hat',
     image_url TEXT,
     description TEXT
 );
