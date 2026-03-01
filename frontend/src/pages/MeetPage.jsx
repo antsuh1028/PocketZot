@@ -10,20 +10,21 @@ import {
 import "../index.css";
 import { useState } from "react";
 
-const FONT = "'Press Start 2P', monospace";
+const FONT = "Reddit Mono, monospace";
 
 export default function MeetPage({ onNext }) {
   const [name, setName] = useState("");
 
   return (
     <Box bg="var(--bg)" border="3px" h="590px">
-      <Box p={5}>
+      <VStack p={5} gap={4}>
         <Text
           fontFamily={FONT}
           fontSize="4xl"
           color="var(--dark)"
           textAlign="left"
           ml={6}
+          alignSelf=""
         //   mb={5}
         >
           Meet
@@ -81,7 +82,7 @@ export default function MeetPage({ onNext }) {
             Next
           </Button>
         </Box>
-      </Box>
+      </VStack>
     </Box>
   );
 }
