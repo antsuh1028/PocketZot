@@ -5,7 +5,7 @@ import { PixBtn } from "./WelcomePage.jsx";
 const FONT = "'Press Start 2P', monospace";
 const BACKEND_URL = "http://127.0.0.1:8000";
 
-export default function MainPage({ user, onShop }) {
+export default function MainPage({ user, onShop, onStart }) {
   const [anteater, setAnteater] = useState(null);
   const [isSpawned, setIsSpawned] = useState(false);
 
@@ -13,37 +13,15 @@ export default function MainPage({ user, onShop }) {
     if (!user) return;
     fetch(`${BACKEND_URL}/api/anteaters`)
       .then((r) => r.json())
-      .then((list) => {
-        const found = list.find((a) => a.uid === user.id) || null;
-        setAnteater(found);
-        
-        // Store anteater details and user ID in chrome storage for background script
-        if (found && chrome && chrome.storage) {
-          chrome.storage.local.set({
-            userId: user.id,
-            anteaterDetails: {
-              id: found.id,
-              name: found.name,
-              health: found.health,
-              isDead: found.isDead,
-              uid: found.uid
-            }
-          });
-        }
-      })
+      .then((list) => setAnteater(list.find((a) => a.uid === user.id) || null))
       .catch(() => {});
   }, [user]);
 
   const handleSpawn = () => {
     if (isSpawned) return;
 
-    // Send message to content script to spawn anteater
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, { action: "spawnAnteater" });
-        setIsSpawned(true);
-      }
-    });
+    if (onStart) onStart();
+    setIsSpawned(true);
   };
 
   const name = anteater?.name || user?.name || "Georgia";
