@@ -1,64 +1,98 @@
-import {
-    Box,
-    Button,
-    Heading,
-    Image,
-    Text,
-    VStack,
-  } from "@chakra-ui/react";
-  
-  import "../index.css";
-  
-  export default function WelcomePage({ onSignUp, onLogIn }) {
-    return (
-      <Box bg="#31FF51" p={4} h="full">
-        <VStack align="stretch" gap={4} px={8} maxW="350px" mx="auto" justify="center" alignItems="center">
-        <Box position="relative">
-            <Text 
-                fontSize="md" 
-                fontFamily="Reddit Mono" 
-                fontWeight="500"
-                textAlign="center"
-                zIndex={10}
-            >
-                Good command, you're learning!
-            </Text>
-            <Image src="./icons/GoodChat.svg" width="full" position="absolute"
-                top="50%" 
-                left="50%" 
-                transform="translate(-50%, -50%)"/>
+import { Box, Text, Image, VStack, HStack, Button } from "@chakra-ui/react";
+
+const FONT = "'Press Start 2P', monospace";
+const REDDIT = "Reddit Mono, monospace";
+
+export default function GoodCommandPage({ user, anteater, classification, onEnd }) {
+  const name = anteater?.name || user?.name || "Georgia";
+  const health = anteater?.health ?? 100;
+  const ants = user?.ants ?? 0;
+  const suggestion = classification?.suggestion || "Keep it up!";
+
+  return (
+    <Box bg="#31FF51" minH="100%" p={5}>
+      <VStack gap={5} align="center">
+
+        {/* Header message */}
+        <Box position="relative" w="full" textAlign="center" pt={2}>
+          <Text fontFamily={REDDIT} fontSize="lg" fontWeight="600" color="#1a4a2a" zIndex={1} position="relative">
+            Good command, you're learning!
+          </Text>
         </Box>
-          <Box py={4} borderRadius={10} justifyContent="center" alignItems="center" width="full">
-          <VStack width="full">
-                <Image src="IdleSmooth.png" width="120px"/>
-                <Text fontFamily="'Press Start 2P'" fontSize="2xl">Georgia</Text>
-                <Box 
-                    display="flex" 
-                    justifyContent="space-between" 
-                    borderRadius={4} 
-                    width="full" 
-                    p="15px" 
-                    fontFamily="'Press Start 2P'"
-                >
-                    <Box>
-                        <Text fontWeight="500" fontSize="sm">Health</Text>
-                    </Box>
-                    <Box display="flex" flexDirection="column">
-                        <Text fontWeight="500" fontSize="sm">Ants</Text>
-                        <Image src="Normal Ant.png" width="30px"/>
-                    </Box>
-                </Box>
-            </VStack>
-          </Box>
-          <Box p={8} border="solid black 2px" width="full" borderRadius={10} color="#4CF190" bg="#00364C">
-            <VStack fontFamily="Reddit Mono">
-                <Box>
-                    <Text textAlign="left">Keep it up!</Text>
-                </Box>
-            </VStack>
-          </Box>
-          <Button fontFamily="'Press Start 2P'" fontSize="2xl" bg="#A90000" border="solid black 2px" borderRadius="lg   " width="80%" p="15px">End</Button>
-        </VStack>
-      </Box>
-    );
-  }
+
+        {/* Anteater card */}
+        <Box bg="white" border="2px solid black" borderRadius={10} p={4} w="full">
+          <VStack gap={3} align="center">
+            <Image src="IdleSmooth.png" w="130px" />
+
+            <Text fontFamily={FONT} fontSize="xl" color="#3a2e22" textAlign="center">
+              {name}
+            </Text>
+
+            {/* Stats row */}
+            <Box
+              bg="#DBB166"
+              border="2px solid black"
+              borderRadius={4}
+              w="full"
+              p={3}
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+            >
+              <VStack gap={1} align="flex-start">
+                <Text fontFamily={FONT} fontSize="xs" color="#3a2e22">Health</Text>
+                <HStack gap={2}>
+                  <Text fontSize="14px">❤️</Text>
+                  <Box w="80px" h="8px" bg="#8a7a6a" borderRadius={2}>
+                    <Box w={`${health}%`} h="100%" bg="#7ab86a" borderRadius={2} />
+                  </Box>
+                </HStack>
+              </VStack>
+
+              <VStack gap={1} align="center">
+                <Text fontFamily={FONT} fontSize="xs" color="#3a2e22">Ants</Text>
+                <HStack gap={1}>
+                  <Text fontFamily={FONT} fontSize="sm" color="#3a2e22">{ants}</Text>
+                  <Image src="NakedAnt.png" boxSize="24px" />
+                </HStack>
+              </VStack>
+            </Box>
+          </VStack>
+        </Box>
+
+        {/* Suggestion box */}
+        <Box
+          p={5}
+          border="2px solid black"
+          w="full"
+          borderRadius={10}
+          bg="#00364C"
+        >
+          <VStack fontFamily={REDDIT} gap={2}>
+            <Text color="#4CF190" fontSize="sm" textAlign="left" w="full">
+              {suggestion}
+            </Text>
+          </VStack>
+        </Box>
+
+        <Button
+          fontFamily={FONT}
+          fontSize="lg"
+          bg="#A90000"
+          color="white"
+          border="2px solid black"
+          borderRadius="lg"
+          w="80%"
+          py={6}
+          onClick={onEnd}
+          _hover={{ bg: "#8a0000" }}
+          _active={{ transform: "translateY(1px)" }}
+        >
+          End
+        </Button>
+
+      </VStack>
+    </Box>
+  );
+}
