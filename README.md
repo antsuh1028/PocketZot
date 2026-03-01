@@ -4,9 +4,9 @@ Chrome Extension (Manifest V3) with a Shimeji-style anteater mascot that walks a
 
 ## Features
 
-- **Anteater mascot** — Walks around the page, can be dragged and thrown
-- **Shop** — Buy hats (Plumber, Merrier, Egg, Crown) with ants, equip/unequip
-- **Login / Sign up** — Email-based auth
+- **Anteater mascot** — Walks around the page, can be dragged and thrown (Will steal your mouse occaisionally)
+- **Shop** — Buy hats (Plunger, Cracked Egg, Crown, and Christmas Hat) with the ants you collect
+- **Login / Sign up** — Email-based auth for data saving
 - **Prompt classification** — LLM rates your prompts; mascot reacts (good/bad)
 - **Ants & health** — Earn ants for good prompts, spend in shop
 
