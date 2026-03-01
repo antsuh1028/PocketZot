@@ -1,5 +1,9 @@
 node_modules
-# package-lock.json
+
+# Python virtual environment
+.venv/
+venv/
+env/
 # package.json
 # vite.config.js
 backend\.env
@@ -7,3 +11,4 @@ backend\.env
 .env*.local
 __pycache__/
 backend/src/api/__pycache__/
+backend/.env

@@ -6,6 +6,8 @@
 (function () {
   "use strict";
 
+  var mult = 3; // multiplies ant image count (default 3)
+
   if (window.__pocketzotLoaded) return;
   window.__pocketzotLoaded = true;
 
@@ -65,7 +67,7 @@
       right: 10px;
       font-size: 13px;
       font-weight: 600;
-      color: #111827;
+      color: #ffffff;
       line-height: 1.35;
       text-align: center;
     `;
@@ -245,23 +247,27 @@
   }
 
   function sendPromptToBackend(promptText) {
-    fetch("http://localhost:8000/api/classify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: promptText }),
-    })
-      .then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.json();
-      })
-      .then(function (data) {
-        console.log("[PocketZot] Classification:", data);
-        storeClassification(promptText, data);
-        showClassificationToast(data);
-      })
-      .catch(function (err) {
-        console.error("[PocketZot] classify error:", err);
-      });
+    chrome.runtime.sendMessage(
+      { action: "CLASSIFY", prompt: promptText },
+      function (response) {
+        if (chrome.runtime.lastError) {
+          console.error("[PocketZot] classify error:", chrome.runtime.lastError.message);
+          return;
+        }
+        if (response && response.ok && response.data) {
+          var data = response.data;
+          console.log("[PocketZot] Classification:", data);
+          storeClassification(promptText, data);
+          showClassificationToast(data);
+          var pet = getAnteater();
+          if (pet && pet.isActive && pet.isActive() && pet.standStillFor) {
+            pet.standStillFor(15000);
+          }
+        } else {
+          console.error("[PocketZot] classify error:", response ? response.error : "No response");
+        }
+      },
+    );
   }
 
   function storeClassification(prompt, classification) {
@@ -278,6 +284,12 @@
       });
       if (list.length > 100) list = list.slice(-100);
       localStorage.setItem("pocketzot_classifications", JSON.stringify(list));
+
+      // simply expose the full classification object to other scripts
+      window.PocketZotLastClassification = classification;
+      window.dispatchEvent(new CustomEvent('pocketzot:classification', {
+        detail: { classification: classification },
+      }));
     } catch (e) {
       console.error("[PocketZot] store error:", e);
     }
@@ -423,5 +435,116 @@
     clearAll: function () {
       localStorage.removeItem("pocketzot_classifications");
     },
+    // helpers for external scripts
+    onClassification: function (cb) {
+      if (typeof cb === 'function') {
+        window.addEventListener('pocketzot:classification', function (e) {
+          cb(e.detail.classification);
+        });
+      }
+    },
+    getLastClassification: function () {
+      return window.PocketZotLastClassification || null;
+    },
   };
+
+  // ------------------------------------------------------------
+  // helper to drop PNGs around the mascot element when a classification
+  // arrives.  The caller passes the raw classification object and the
+  // routine will schedule `count = Math.abs(value) * 12` images to be
+  // created at random offsets (±30px X, 0..-20px Y) relative to the
+  // current sprite position.  Images are spaced ~250ms apart so they
+  // don’t overload the page; each one auto‑cleans after a couple seconds.
+  //
+  // You can change `imageUrl` to point at whatever PNG you like; the
+  // example uses a file in the extension’s `dist` folder.
+  // ------------------------------------------------------------
+  function showClassificationAnts(classification) {
+    if (!classification || typeof classification.value !== 'number') return;
+    var value = classification.value;
+    if (value === 0) return;
+
+    var baseCount = Math.abs(Math.floor(value));
+    if (baseCount <= 0 || baseCount > 3) return;
+    var count = baseCount * mult;
+
+    var sprite = document.getElementById('pocketzot-mascot');
+    if (!sprite) return;
+
+    var rect = sprite.getBoundingClientRect();
+    var imgPath = value > 0 ? 'dist/anteaterchar/assets/+1Ant.png' : 'dist/anteaterchar/assets/neg1Ant.png';
+    var imgUrl = chrome.runtime.getURL(imgPath);
+
+    var antSize = 76;
+    var intervalMs = 400;
+    var lifeMs = 1300;
+    var margin = 30;
+    var minGap = antSize + 8;
+
+    function placeOutsideRect() {
+      var zone = Math.floor(Math.random() * 4);
+      var x, y;
+      if (zone === 0) {
+        x = rect.left - antSize / 2 + Math.random() * (rect.width + antSize);
+        y = rect.top - antSize - margin - Math.random() * margin;
+      } else if (zone === 1) {
+        x = rect.left - antSize / 2 + Math.random() * (rect.width + antSize);
+        y = rect.bottom + Math.random() * margin;
+      } else if (zone === 2) {
+        x = rect.left - antSize - margin - Math.random() * margin;
+        y = rect.top - antSize / 2 + Math.random() * (rect.height + antSize);
+      } else {
+        x = rect.right + Math.random() * margin;
+        y = rect.top - antSize / 2 + Math.random() * (rect.height + antSize);
+      }
+      return { x: x, y: y };
+    }
+
+    function overlapsAnt(ax, ay, placed) {
+      for (var j = 0; j < placed.length; j++) {
+        var p = placed[j];
+        var dx = Math.abs(ax - p.x);
+        var dy = Math.abs(ay - p.y);
+        if (dx < minGap && dy < minGap) return true;
+      }
+      return false;
+    }
+
+    var positions = [];
+    var maxAttempts = 50;
+    for (var a = 0; a < count; a++) {
+      var pos = null;
+      for (var attempt = 0; attempt < maxAttempts; attempt++) {
+        var trial = placeOutsideRect();
+        if (!overlapsAnt(trial.x, trial.y, positions)) {
+          pos = trial;
+          break;
+        }
+      }
+      pos = pos || placeOutsideRect();
+      positions.push(pos);
+    }
+
+    for (var i = 0; i < count; i++) {
+      (function (idx) {
+        setTimeout(function () {
+          var pos = positions[idx];
+          var img = document.createElement('img');
+          img.src = imgUrl;
+          img.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483648;width:' + antSize + 'px;height:' + antSize + 'px;';
+          img.style.left = Math.round(pos.x) + 'px';
+          img.style.top = Math.round(pos.y) + 'px';
+          document.body.appendChild(img);
+          setTimeout(function () {
+            if (img.parentNode) img.parentNode.removeChild(img);
+          }, lifeMs);
+        }, idx * intervalMs);
+      })(i);
+    }
+  }
+
+  window.addEventListener('pocketzot:classification', function (e) {
+    var cls = e && e.detail && e.detail.classification;
+    if (cls) showClassificationAnts(cls);
+  });
 })();
