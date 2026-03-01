@@ -3,11 +3,11 @@ import { Box, Text, HStack, SimpleGrid } from "@chakra-ui/react";
 import { PixBtn } from "./WelcomePage.jsx";
 
 const FONT = "'Press Start 2P', monospace";
-const BACKEND_URL = "http://127.0.0.1:8000";
+const BACKEND_URL = "http://localhost:8000";
 
 function TitleBar({ onBack }) {
   return (
-    <Box bg="var(--panel)" borderBottom="3px solid var(--border)" px={3} py="5px"
+    <Box bg="var(--panel)" borderBottom="2px solid var(--border)" px={3} py="5px"
       display="flex" alignItems="center" justifyContent="space-between">
       <Text fontFamily={FONT} fontSize="9px" color="var(--dark)">Pocket Zot</Text>
       <HStack gap="4px">
@@ -32,14 +32,78 @@ function resolveImageUrl(imageUrl) {
   return imageUrl;
 }
 
+function AnteaterPreview({ equippedHat }) {
+  const walkUrl = resolveImageUrl("dist/anteaterchar/assets/WALK LEFT.png");
+  return (
+    <Box position="relative" w="100px" h="100px" mx="auto" flexShrink={0}>
+      {walkUrl && (
+        <Box
+          as="img"
+          src={walkUrl}
+          position="absolute"
+          inset={0}
+          w="100%"
+          h="100%"
+          objectFit="contain"
+          style={{ imageRendering: "pixelated" }}
+        />
+      )}
+      {equippedHat?.image_url && (
+        <Box
+          position="absolute"
+          inset={0}
+          display="flex"
+          alignItems="flex-start"
+          justifyContent="center"
+          pointerEvents="none"
+        >
+          <Box
+            as="img"
+            src={resolveImageUrl(equippedHat.image_url)}
+            maxW="120%"
+            maxH="70px"
+            objectFit="contain"
+            style={{ marginTop: "-10px", imageRendering: "pixelated" }}
+          />
+        </Box>
+      )}
+    </Box>
+  );
+}
+
 export default function ShopPage({ user, onBack, onUserUpdate }) {
   const uid = user?.id ?? 1;
   const [items, setItems] = useState([]);
   const [inventory, setInventory] = useState([]);
+  const [anteater, setAnteater] = useState(null);
+  const [equippedHat, setEquippedHat] = useState(null);
   const [confirming, setConfirming] = useState(null);
   const [buying, setBuying] = useState(false);
   const [error, setError] = useState(null);
+  const [clickFeedbackId, setClickFeedbackId] = useState(null);
   const ants = user?.ants ?? 0;
+
+  useEffect(() => {
+    if (!user) return;
+    fetch(`${BACKEND_URL}/api/anteaters`)
+      .then((r) => r.json())
+      .then((list) => setAnteater(list.find((a) => a.uid === user.id) || null))
+      .catch(() => {});
+  }, [user]);
+
+  useEffect(() => {
+    if (typeof chrome === "undefined" || !chrome.storage?.local) return;
+    chrome.storage.local.get("pocketzot_equipped_hat", (data) => {
+      setEquippedHat(data?.pocketzot_equipped_hat || null);
+    });
+    const listener = (changes, area) => {
+      if (area === "local" && changes.pocketzot_equipped_hat) {
+        setEquippedHat(changes.pocketzot_equipped_hat.newValue || null);
+      }
+    };
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
+  }, []);
 
   const fetchShop = () => {
     fetch(`${BACKEND_URL}/api/accessories/user/${uid}/shop`)
@@ -60,7 +124,9 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
     fetchInventory();
   }, [uid]);
 
-  const handleBuy = async () => {
+  const handleBuy = async (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
     if (!confirming || !user) return;
     setBuying(true);
     setError(null);
@@ -89,14 +155,16 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
     }
   };
 
-  const setEquippedHat = (hat) => {
-    if (typeof chrome !== "undefined" && chrome.storage?.local) {
-      chrome.storage.local.set({ pocketzot_equipped_hat: hat });
-    }
+  const persistEquippedHat = (hat) => {
+    setEquippedHat(hat);
+    if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) return;
+    chrome.runtime.sendMessage({ action: "EQUIP_HAT", hat });
   };
 
   const toggleEquip = async (ua) => {
     if (!ua) return;
+    setClickFeedbackId(ua.id);
+    setTimeout(() => setClickFeedbackId(null), 300);
     const isEquipped = ua.anteater_id != null;
     try {
       const res = await fetch(
@@ -107,12 +175,12 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
       const updated = await res.json();
       fetchInventory();
       const hat = !isEquipped ? { image_url: updated.image_url, name: updated.name, user_accessory_id: updated.id } : null;
-      setEquippedHat(hat);
+      persistEquippedHat(hat);
     } catch {
       if (!isEquipped) {
-        setEquippedHat({ image_url: ua.image_url, name: ua.name, user_accessory_id: ua.id });
+        persistEquippedHat({ image_url: ua.image_url, name: ua.name, user_accessory_id: ua.id });
       } else {
-        setEquippedHat(null);
+        persistEquippedHat(null);
       }
       fetchInventory();
     }
@@ -120,29 +188,77 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
 
   const displayItems = items.length ? items.slice(0, 6) : Array(6).fill(null);
   const ownedHats = inventory.filter((i) => i.type === "hat");
+  const anteaterName = anteater?.name || user?.name || "Bobby";
 
   return (
-    <Box bg="var(--bg)" border="3px solid var(--border)" boxShadow="4px 4px 0 #6a5a4a">
+    <Box
+      bg="var(--bg)"
+      display="flex"
+      flexDir="column"
+      minH="500px"
+      h="100%"
+    >
       <TitleBar onBack={onBack} />
-      <Box p={5}>
-        <HStack justify="space-between" mb={4}>
+      {/* Top section: Shop + ants */}
+      <Box px={4} pt={4} pb={2}>
+        <HStack justify="space-between">
           <Text fontFamily={FONT} fontSize="14px" color="var(--dark)">Shop</Text>
           <Text fontFamily={FONT} fontSize="11px" color="var(--dark)">{ants} 🐜</Text>
         </HStack>
+      </Box>
 
-        <SimpleGrid columns={3} gap={3} mb={4}>
-          {displayItems.map((item, i) => (
-            <Box
-              key={item?.id ?? i}
-              aspectRatio="1"
-              bg="var(--panel)"
-              border="2px solid var(--border)"
-              cursor={item ? "pointer" : "default"}
-              onClick={() => item && !item.owned && setConfirming(item)}
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-            >
+      {/* Centered anteater name */}
+      <Text
+        color="#000"
+        textAlign="center"
+        fontFamily={FONT}
+        fontSize="12px"
+        fontStyle="normal"
+        fontWeight={400}
+        lineHeight="normal"
+        letterSpacing="0.144px"
+        mt={1}
+        mb={2}
+      >
+        {anteaterName}
+      </Text>
+
+      {/* Walk sprite + equipped hat preview */}
+      <Box display="flex" justifyContent="center" mb={3}>
+        <Box transform="scale(1.15)">
+          <AnteaterPreview equippedHat={equippedHat} />
+        </Box>
+      </Box>
+
+      {/* Bottom 1/3: drawer for items */}
+      <Box flex={1} minH="140px" px={4} pb={4} overflowY="auto" display="flex" flexDir="column">
+        <SimpleGrid columns={2} gap={3} flex={1}>
+            {displayItems.map((item, i) => {
+              const ua = item?.owned ? inventory.find((inv) => inv.id === item.user_accessory_id || (inv.accessory_id === item.id)) : null;
+              const isClickFeedback = ua && clickFeedbackId === ua.id;
+              return (
+              <Box
+                key={item?.id ?? i}
+                aspectRatio="1"
+                bg="var(--panel)"
+                border="2px solid var(--border)"
+                borderColor={isClickFeedback ? "green.500" : undefined}
+                boxShadow={isClickFeedback ? "0 0 0 3px rgba(34,197,94,0.6)" : undefined}
+                cursor={item ? "pointer" : "default"}
+                transform={isClickFeedback ? "scale(0.92)" : undefined}
+                transition="transform 0.1s, border-color 0.1s, box-shadow 0.1s"
+                onClick={() => {
+                  if (!item) return;
+                  if (item.owned) {
+                    if (ua) toggleEquip(ua);
+                  } else {
+                    setConfirming(item);
+                  }
+                }}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+              >
               {item?.image_url && (
                 <Box
                   as="img"
@@ -153,8 +269,9 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
                 />
               )}
             </Box>
-          ))}
+          );})}
         </SimpleGrid>
+        </Box>
 
         {ownedHats.length > 0 && (
           <Box mb={4}>
@@ -169,10 +286,14 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
                   h="60px"
                   bg="var(--panel)"
                   border={ua.anteater_id ? "3px solid var(--border)" : "2px solid var(--border)"}
+                  borderColor={clickFeedbackId === ua.id ? "green.500" : undefined}
+                  boxShadow={clickFeedbackId === ua.id ? "0 0 0 3px rgba(34,197,94,0.6)" : undefined}
                   cursor="pointer"
                   display="flex"
                   alignItems="center"
                   justifyContent="center"
+                  transform={clickFeedbackId === ua.id ? "scale(0.92)" : undefined}
+                  transition="transform 0.1s, border-color 0.1s, box-shadow 0.1s"
                   onClick={() => toggleEquip(ua)}
                 >
                   {ua.image_url && (
@@ -189,9 +310,10 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
             </HStack>
           </Box>
         )}
+      </Box>
 
-        {/* Confirm buy overlay — full-screen popup */}
-        {confirming && (
+      {/* Confirm buy overlay — full-screen popup */}
+      {confirming && (
           <Box
             position="fixed"
             inset={0}
@@ -203,14 +325,15 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
             onClick={(e) => e.target === e.currentTarget && setConfirming(null)}
           >
             <Box
-              bg="var(--panel)"
+              bg="white"
               border="3px solid var(--border)"
               p={5}
               maxW="300px"
+              boxShadow="0 4px 20px rgba(0,0,0,0.4)"
               onClick={(e) => e.stopPropagation()}
             >
               <HStack justify="space-between" mb={3}>
-                <Text fontFamily={FONT} fontSize="10px" color="var(--dark)">
+                <Text fontFamily={FONT} fontSize="10px" color="#1a1a1a">
                   Confirm Buy?
                 </Text>
                 <Text
@@ -225,7 +348,7 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
               <Box
                 w="70px"
                 h="70px"
-                bg="var(--bg)"
+                bg="gray.100"
                 border="2px solid var(--border)"
                 mx="auto"
                 mb={3}
@@ -259,7 +382,6 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
             </Box>
           </Box>
         )}
-      </Box>
     </Box>
   );
 }

@@ -11,6 +11,20 @@ import ShopPage from "./pages/ShopPage.jsx";
 
 const DEV_MODE = true;
 const BACKEND_URL = "http://127.0.0.1:8000";
+
+async function clearInventory(uid, onUserUpdate) {
+  try {
+    await fetch(`${BACKEND_URL}/api/accessories/user/${uid}/clear-inventory`, { method: "POST" });
+    if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
+      chrome.runtime.sendMessage({ action: "EQUIP_HAT", hat: null });
+    }
+    if (onUserUpdate) {
+      const r = await fetch(`${BACKEND_URL}/api/users/${uid}`);
+      const u = await r.json();
+      onUserUpdate(u);
+    }
+  } catch (e) { /* ignore */ }
+}
 const PAGES = [
   "welcome",
   "signup",
@@ -94,6 +108,25 @@ export default function App() {
               {v}
             </Button>
           ))}
+          {user && (
+            <Button
+              size="xs"
+              onClick={() => clearInventory(user.id, setUser)}
+              bg="red.100"
+              color="gray.800"
+              border="1px solid"
+              borderColor="red.300"
+              borderRadius={0}
+              fontFamily="monospace"
+              fontSize="10px"
+              h="auto"
+              px={2}
+              py="2px"
+              _hover={{ opacity: 0.8 }}
+            >
+              Clear inv
+            </Button>
+          )}
         </Box>
       )}
 

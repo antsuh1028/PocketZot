@@ -73,6 +73,8 @@ var PZSprite = (function () {
     this._frame     = 0;
     this._frameMsElapsed = 0;
     this._lastState = null;
+    this._hatEl     = null;
+    this._contentEl = null; // emoji/placeholder text — separate from _hatEl so we never wipe it
   }
   
   function resolveAssetPath(p) {
@@ -101,7 +103,7 @@ var PZSprite = (function () {
       pointerEvents : 'auto',
       cursor        : 'grab',
       userSelect    : 'none',
-      overflow      : 'hidden',
+      overflow      : 'visible',
       borderRadius  : '0',
       border        : 'none',
       outline       : 'none',
@@ -119,35 +121,43 @@ var PZSprite = (function () {
       el.style.backgroundRepeat = 'no-repeat';
     }
 
+    // Content span for emoji fallback — must NOT use el.textContent or it wipes _hatEl
+    this._contentEl = document.createElement('span');
+    this._contentEl.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;';
+    el.appendChild(this._contentEl);
+
     this._hatEl = document.createElement('div');
     this._hatEl.id = 'pocketzot-hat';
-    this._hatEl.style.cssText = 'position:absolute;top:-25px;left:50%;transform:translateX(-50%);width:100%;height:100%;pointer-events:none;display:flex;align-items:flex-start;justify-content:center;';
+    this._hatEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;display:flex;align-items:flex-start;justify-content:center;z-index:999999;';
     el.appendChild(this._hatEl);
+
     this.el = el;
     document.body.appendChild(el);
-    this._updateHatOverlay();
-    if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
+
+    // Load current hat from storage on mount
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
       var self = this;
-      chrome.storage.onChanged.addListener(function (changes, area) {
-        if (area === 'local' && changes.pocketzot_equipped_hat) self._updateHatOverlay();
+      chrome.storage.local.get('pocketzot_equipped_hat', function (data) {
+        var hat = data && data.pocketzot_equipped_hat;
+        self.setEquippedHat(hat);
       });
     }
   };
 
-  Sprite.prototype._updateHatOverlay = function () {
+  /**
+   * setEquippedHat(hat) — hat is { image_url, name } or null
+   * Updates the hat overlay synchronously. Called by content script when HAT_EQUIPPED message arrives.
+   */
+  Sprite.prototype.setEquippedHat = function (hat) {
     if (!this._hatEl) return;
-    if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
-    var self = this;
-    chrome.storage.local.get('pocketzot_equipped_hat', function (data) {
-      var hat = data && data.pocketzot_equipped_hat;
-      self._hatEl.innerHTML = '';
-      if (hat && hat.image_url) {
-        var img = document.createElement('img');
-        img.src = resolveAssetPath(hat.image_url);
-        img.style.cssText = 'max-width:120%;max-height:80px;object-fit:contain;transform-origin:bottom center;';
-        self._hatEl.appendChild(img);
-      }
-    });
+    this._hatEl.innerHTML = '';
+    if (hat && hat.image_url) {
+      var img = document.createElement('img');
+      img.src = resolveAssetPath(hat.image_url);
+      img.style.cssText = 'max-width:140%;max-height:85px;object-fit:contain;transform-origin:bottom center;margin-top:-15px;';
+      img.alt = hat.name || 'hat';
+      this._hatEl.appendChild(img);
+    }
   };
 
   Sprite.prototype.unmount = function () {
@@ -220,17 +230,15 @@ var PZSprite = (function () {
     }
 
     if (img) {
-      // show an image instead of an emoji (resolve path for extension/page)
       var url = resolveAssetPath(img);
       this.el.style.backgroundImage = 'url("' + url + '")';
       this.el.style.backgroundRepeat = 'no-repeat';
       this.el.style.backgroundPosition = 'center';
       this.el.style.backgroundSize = 'contain';
-      this.el.textContent = '';
+      this._contentEl.textContent = '';
     } else {
-      // clear any previous placeholder image and show emoji
       this.el.style.backgroundImage = 'none';
-      this.el.textContent = p.emoji || '';
+      this._contentEl.textContent = p.emoji || '';
     }
   };
 

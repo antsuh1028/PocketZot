@@ -16,6 +16,7 @@ export function PixBtn({
   bg,
   color,
   border,
+  disabled,
 }) {
   const variantStyles = {
     default: {
@@ -34,7 +35,9 @@ export function PixBtn({
 
   return (
     <Button
+      type="button"
       onClick={onClick}
+      disabled={disabled}
       width={fullWidth ? "100%" : "auto"}
       minH="34px"
       px={4}

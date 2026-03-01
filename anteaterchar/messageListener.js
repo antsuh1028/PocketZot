@@ -176,6 +176,13 @@
         case "STATUS":
           sendResponse({ active: anteater ? anteater.isActive() : false });
           break;
+        case "HAT_EQUIPPED":
+          var a = anteater;
+          if (a && a.isActive && a.isActive() && a._sprite && typeof a._sprite.setEquippedHat === "function") {
+            a._sprite.setEquippedHat(message.hat);
+          }
+          sendResponse({ ok: true });
+          break;
         default:
           sendResponse({ error: "Unknown action: " + message.action });
       }
