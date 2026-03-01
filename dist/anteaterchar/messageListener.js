@@ -1,147 +1,162 @@
 /**
  * messageListener.js
  * The primary Chrome content script entry point.
- * Injected into EVERY TAB via manifest.json → content_scripts. (change to just the ai models?)
- * 
- * This file only:
- *   1. Builds one PZAnteater instance per tab
- *   2. Listens for messages from the React popup
- *   3. Shows a popover with a "Start" button to spawn the anteater
- *
- * Messages:
- *   { action: 'SPAWN'  }  → spawn the anteater on this tab
- *   { action: 'DESPAWN'}  → remove it
- *   { action: 'TOGGLE' }  → spawn if absent, despawn if present
- *   { action: 'STATUS' }  → reply { active: bool }
  */
 
 (function () {
-  'use strict';
+  "use strict";
 
-  // Guard: prevents double-injection if the script runs twice in same tab
   if (window.__pocketzotLoaded) return;
   window.__pocketzotLoaded = true;
 
-  // Verbose startup logging — verify all globals loaded in DevTools
-  console.log('[PocketZot] messageListener starting...');
-  console.log('[PocketZot] PZPhysics      =', typeof window.PZPhysics);
-  console.log('[PocketZot] PZStateMachine =', typeof window.PZStateMachine);
-  console.log('[PocketZot] PZSprite       =', typeof window.PZSprite);
-  console.log('[PocketZot] PZDrag         =', typeof window.PZDrag);
-  console.log('[PocketZot] PZAnteater     =', typeof window.PZAnteater);
-  console.log('[PocketZot] Content script ready ✓');
+  console.log("[PocketZot] messageListener starting...");
+  console.log("[PocketZot] PZPhysics      =", typeof window.PZPhysics);
+  console.log("[PocketZot] PZStateMachine =", typeof window.PZStateMachine);
+  console.log("[PocketZot] PZSprite       =", typeof window.PZSprite);
+  console.log("[PocketZot] PZDrag         =", typeof window.PZDrag);
+  console.log("[PocketZot] PZAnteater     =", typeof window.PZAnteater);
+  console.log("[PocketZot] Content script ready ✓");
 
-  // Lazily constructed — we wait until first message to build it
   var anteater = null;
 
   function getAnteater() {
     if (!anteater) {
-      // chrome.runtime.getURL gives us the path to files inside the extension package.
-      // This is how we load the sprite sheet from the extension's own files.
-      var spriteUrl = null; //chrome.runtime.getURL('anteaterchar/assets/anteater.png');
-      anteater = new window.PZAnteater({ spriteUrl: spriteUrl });
+      anteater = new window.PZAnteater({ spriteUrl: null });
     }
     return anteater;
   }
 
-  // Create and inject the popover UI
+  // ─── Popover ────────────────────────────────────────────────────────────────
   function createPopover() {
-    // Check if popover already exists
-    if (document.getElementById('pocketzot-popover')) return;
+    if (document.getElementById("pocketzot-popover")) return;
 
-    var popover = document.createElement('div');
-    popover.id = 'pocketzot-popover';
-    
+    // Outer shell — 136 × 169, transparent so only the card shows
+    var popover = document.createElement("div");
+    popover.id = "pocketzot-popover";
     popover.style.cssText = `
       position: fixed;
       bottom: 20px;
       right: 20px;
       z-index: 2147483646;
+      width: 136px;
+      height: 169px;
       background: transparent;
-      border-radius: 16px;
-      padding: 12px;
-      box-shadow: none;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      color: #1f2937;
-      width: auto;
-      min-height: auto;
-      text-align: left;
-      box-sizing: border-box;
-      display: flex;
-      gap: 8px;
-      align-items: flex-start;
     `;
 
-    var mascotPlaceholder = document.createElement('img');
-    mascotPlaceholder.src = chrome.runtime.getURL('dist/Idle State.png');
-    mascotPlaceholder.style.cssText = `
-      width: 80px;
-      height: 80px;
-      border-radius: 10px;
-      object-fit: contain;
-      user-select: none;
-      flex-shrink: 0;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      filter: brightness(1);
-    `;
-    
-    mascotPlaceholder.onmouseover = function() {
-      this.style.filter = 'brightness(0.9)';
-    };
-    mascotPlaceholder.onmouseout = function() {
-      this.style.filter = 'brightness(1)';
-    };
-
-    var header = document.createElement('div');
-    header.textContent = 'Do you want to start PocketZot?';
-    header.style.cssText = `
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: #1f2937;
-    `;
-    
-    var dialogueBox = document.createElement('div');
-    dialogueBox.style.cssText = `
-      background: #ffffff;
-      border: 2px solid #d1d5db;
-      border-radius: 12px;
-      padding: 12px 14px;
-      position: relative;
-      flex: 1;
-      min-width: 140px;
-      transition: all 0.2s ease;
-    `;
-    
-    var speechBubbleTail = document.createElement('div');
-    speechBubbleTail.style.cssText = `
+    // Gray rounded card — fills the whole shell
+    var card = document.createElement("div");
+    card.style.cssText = `
       position: absolute;
-      bottom: -8px;
-      left: 20px;
-      width: 0;
-      height: 0;
-      border-left: 8px solid transparent;
-      border-right: 0px solid transparent;
-      border-top: 8px solid #ffffff;
+      inset: 0;
+      background: transparent;
+      border-radius: 14px;
+      overflow: hidden;
     `;
-    dialogueBox.appendChild(speechBubbleTail);
+    popover.appendChild(card);
 
-    var dialogueText = document.createElement('div');
-    dialogueText.textContent = 'Press Me!';
-    dialogueText.style.cssText = `
-      font-size: 13px;
-      line-height: 1.4;
-      font-weight: 500;
-      margin: 0;
-      word-wrap: break-word;
+    // Question text — top-center
+    var question = document.createElement("div");
+    question.textContent = "Did you want start PocketZot?";
+    question.style.cssText = `
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #111827;
+      line-height: 1.3;
+      text-align: center;
     `;
-    dialogueBox.appendChild(dialogueText);
+    popover.appendChild(question);
 
-    mascotPlaceholder.onclick = function() {
-      console.log('[PocketZot] Start button clicked');
-      
-      // Reset ALL session state before starting
+    // Speech bubble — left side, pointing right toward the anteater
+    var bubble = document.createElement("div");
+    bubble.style.cssText = `
+  position: absolute;
+  top: 74px;
+  left: 10px;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+`;
+
+    var tail = document.createElement("div");
+    tail.style.cssText = `
+  position: absolute;
+  right: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid #ffffff;
+`;
+    bubble.appendChild(tail);
+    bubble.appendChild(document.createTextNode("Press me!"));
+    popover.appendChild(bubble);
+    // var btn = document.createElement("button");
+    // btn.textContent = "Press me!";
+    // btn.style.cssText = `
+    //   background: none;
+    //   border: none;
+    //   padding: 0;
+    //   font-size: 12px;
+    //   font-weight: 700;
+    //   color: #111827;
+    //   cursor: pointer;
+    //   font-family: inherit;
+    //   white-space: nowrap;
+    //   display: block;
+    // `;
+    // btn.onmouseover = function () {
+    //   this.style.opacity = "0.6";
+    // };
+    // btn.onmouseout = function () {
+    //   this.style.opacity = "1";
+    // };
+    // btn.onclick = function () {
+    //   processedPrompts.clear();
+    //   seenNodes = new WeakSet();
+    //   lastPromptCount = 0;
+    //   if (promptObserver) {
+    //     promptObserver.disconnect();
+    //     promptObserver = null;
+    //   }
+    //   localStorage.removeItem("pocketzot_classifications");
+    //   console.log("[PocketZot] Session reset");
+    //   getAnteater().spawn();
+    //   startPromptMonitoring();
+    //   popover.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+    //   popover.style.opacity = "0";
+    //   popover.style.transform = "scale(0.9)";
+    //   setTimeout(function () {
+    //     popover.remove();
+    //   }, 300);
+    // };
+    // bubble.appendChild(btn);
+    // popover.appendChild(bubble);
+
+    // Anteater sprite — bottom-right corner of the card
+    var sprite = document.createElement("img");
+    sprite.src = chrome.runtime.getURL("dist/Idle State.png");
+    sprite.style.cssText = `
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  user-select: none;
+  cursor: pointer;
+`;
+    sprite.onclick = function () {
       processedPrompts.clear();
       seenNodes = new WeakSet();
       lastPromptCount = 0;
@@ -149,415 +164,304 @@
         promptObserver.disconnect();
         promptObserver = null;
       }
-      localStorage.removeItem('pocketzot_classifications');
-      console.log('[PocketZot] Cleared previous session data');
-      
+      localStorage.removeItem("pocketzot_classifications");
       getAnteater().spawn();
-      
-      // Start monitoring prompts — only NOW, after user clicks Start
       startPromptMonitoring();
-      
-      // Close the popover after spawning
-      popover.style.opacity = '0';
-      popover.style.transform = 'scale(0.9)';
-      popover.style.transition = 'all 0.3s ease';
-      setTimeout(function() {
+      popover.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+      popover.style.opacity = "0";
+      popover.style.transform = "scale(0.9)";
+      setTimeout(function () {
         popover.remove();
       }, 300);
     };
-
-    // var logoPlaceholder = document.createElement('div');
-    // logoPlaceholder.textContent = 'Logo placeholder';
-    // logoPlaceholder.style.cssText = `
-    //   margin-top: 10px;
-    //   font-size: 12px;
-    //   color: #3b82f6;
-    //   text-decoration: underline;
-    //   white-space: nowrap;
-    //   overflow: hidden;
-    //   text-overflow: ellipsis;
-    // `;
-
-    var contentContainer = document.createElement('div');
-    contentContainer.style.cssText = `
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-    `;
-    contentContainer.appendChild(header);
-    contentContainer.appendChild(dialogueBox);
-
-    popover.appendChild(mascotPlaceholder);
-    popover.appendChild(contentContainer);
+    popover.appendChild(sprite);
 
     document.body.appendChild(popover);
 
-    // Fade in animation
-    popover.style.opacity = '0';
-    popover.style.transform = 'scale(0.9)';
-    setTimeout(function() {
-      popover.style.transition = 'all 0.3s ease';
-      popover.style.opacity = '1';
-      popover.style.transform = 'scale(1)';
+    // Fade in
+    popover.style.opacity = "0";
+    popover.style.transform = "translateY(8px)";
+    setTimeout(function () {
+      popover.style.transition = "opacity 0.25s ease, transform 0.25s ease";
+      popover.style.opacity = "1";
+      popover.style.transform = "translateY(0)";
     }, 10);
 
-    console.log('[PocketZot] Popover created');
+    console.log("[PocketZot] Popover created");
   }
 
-  chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {
-    switch (message.action) {
+  // ─── Chrome message bridge ──────────────────────────────────────────────────
+  chrome.runtime.onMessage.addListener(
+    function (message, _sender, sendResponse) {
+      switch (message.action) {
+        case "SPAWN":
+          getAnteater().spawn();
+          sendResponse({ ok: true });
+          break;
+        case "DESPAWN":
+          if (anteater) anteater.despawn();
+          sendResponse({ ok: true });
+          break;
+        case "TOGGLE":
+          var a = getAnteater();
+          if (a.isActive()) {
+            a.despawn();
+          } else {
+            a.spawn();
+          }
+          sendResponse({ ok: true, active: a.isActive() });
+          break;
+        case "STATUS":
+          sendResponse({ active: anteater ? anteater.isActive() : false });
+          break;
+        default:
+          sendResponse({ error: "Unknown action: " + message.action });
+      }
+      return true;
+    },
+  );
 
-      case 'SPAWN':
-        getAnteater().spawn();
-        sendResponse({ ok: true });
-        break;
-
-      case 'DESPAWN':
-        if (anteater) anteater.despawn();
-        sendResponse({ ok: true });
-        break;
-
-      case 'TOGGLE':
-        var a = getAnteater();
-        if (a.isActive()) { a.despawn(); } else { a.spawn(); }
-        sendResponse({ ok: true, active: a.isActive() });
-        break;
-
-      case 'STATUS':
-        sendResponse({ active: anteater ? anteater.isActive() : false });
-        break;
-
-      default:
-        sendResponse({ error: 'Unknown action: ' + message.action });
-    }
-
-    // Return true to keep the message channel open for async sendResponse
-    return true;
-  });
-
-  // Prompt monitoring system
+  // ─── Prompt monitoring ──────────────────────────────────────────────────────
   var lastPromptCount = 0;
   var promptObserver = null;
-  var processedPrompts = new Set(); // Track prompt text hashes we've already classified
-  var seenNodes = new WeakSet();    // Track DOM nodes we've already seen — immune to count drift
+  var processedPrompts = new Set();
+  var seenNodes = new WeakSet();
 
   function detectPlatform() {
-    var hostname = window.location.hostname;
-    if (hostname.includes('chatgpt.com')) return 'chatgpt';
-    if (hostname.includes('claude.ai')) return 'claude';
-    if (hostname.includes('gemini.google.com')) return 'gemini';
-    if (hostname.includes('perplexity.ai')) return 'perplexity';
-    return 'unknown';
+    var h = window.location.hostname;
+    if (h.includes("chatgpt.com")) return "chatgpt";
+    if (h.includes("claude.ai")) return "claude";
+    if (h.includes("gemini.google.com")) return "gemini";
+    if (h.includes("perplexity.ai")) return "perplexity";
+    return "unknown";
   }
 
   function getPromptSelectors(platform) {
-    var selectors = {
+    var map = {
       chatgpt: {
-        messageContainer: 'main',
-        // data-message-author-role is only set to "user" on user turns
+        messageContainer: "main",
         userMessage: '[data-message-author-role="user"]',
-        inputField: 'textarea[placeholder*="Message"]'
       },
       claude: {
-        // Claude.ai uses a scrollable div, not <main>
-        messageContainer: '[data-testid="conversation-turn-list"]',
+        messageContainer: null,
         messageContainerFallbacks: [
           '[data-testid="conversation-turn-list"]',
-          '.flex-1.overflow-y-auto',
-          '#thread-content',
-          'div[class*="ConversationContainer"]',
-          'div[class*="conversation"]',
+          '[class*="ConversationContainer"]',
+          '[class*="conversation-container"]',
+          "#thread-content",
         ],
-        userMessage: '[data-testid="user-message"]',
-        inputField: 'div[contenteditable="true"]'
+        userMessageSelectors: [
+          '[data-testid="human-turn"]',
+          '[data-testid="user-message"]',
+          '[data-is-streaming="false"][data-role="human"]',
+          ".human-turn",
+        ],
+        userMessage: '[data-testid="human-turn"]',
       },
       gemini: {
-        messageContainer: 'main',
-        userMessage: '.query-content',
-        inputField: 'textarea'
+        messageContainer: "main",
+        userMessage: ".query-content",
       },
       perplexity: {
-        messageContainer: 'main',
+        messageContainer: "main",
         userMessage: '[class*="UserQuery"]',
-        inputField: 'textarea'
-      }
+      },
     };
-    return selectors[platform] || null;
+    return map[platform] || null;
   }
 
-  function extractPromptText(element, platform) {
+  function extractPromptText(element) {
     if (!element) return null;
-    
-    // Try to get text content, stripping extra whitespace
-    var text = element.textContent || element.innerText || '';
-    text = text.trim();
-    
-    // Filter out very short or empty messages
-    if (text.length < 2) return null;
-    
-    return text;
+    var text = (element.textContent || element.innerText || "").trim();
+    return text.length >= 2 ? text : null;
   }
 
   function onPromptDetected(promptText) {
-    // Create a hash of the prompt to track if we've seen it
-    var promptHash = promptText.trim().toLowerCase();
-    
-    if (processedPrompts.has(promptHash)) {
-      console.log('[PocketZot] ⏭️ Skipped duplicate prompt:', promptText.substring(0, 50) + '...');
-      return;
-    }
-    
-    processedPrompts.add(promptHash);
-    console.log('[PocketZot] ✅ NEW prompt detected! Classifying:', promptText.substring(0, 100) + (promptText.length > 100 ? '...' : ''));
-    
-    // Send to backend for classification
+    var hash = promptText.trim().toLowerCase();
+    if (processedPrompts.has(hash)) return;
+    processedPrompts.add(hash);
+    console.log("[PocketZot] ✅ NEW prompt:", promptText.substring(0, 100));
     sendPromptToBackend(promptText);
   }
 
   function sendPromptToBackend(promptText) {
-    // Replace with your actual backend URL
-    var backendUrl = 'http://localhost:8000/api/classify';
-    
-    fetch(backendUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ prompt: promptText })
+    fetch("http://localhost:8000/api/classify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: promptText }),
     })
-    .then(function(response) {
-      if (!response.ok) {
-        throw new Error('HTTP error ' + response.status);
-      }
-      return response.json();
-    })
-    .then(function(data) {
-      console.log('[PocketZot] Classification result:', data);
-      
-      // Store in localStorage
-      storeClassification(promptText, data);
-      
-      // Show visual feedback
-      showClassificationToast(data);
-    })
-    .catch(function(error) {
-      console.error('[PocketZot] Classification error:', error);
-    });
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        console.log("[PocketZot] Classification:", data);
+        storeClassification(promptText, data);
+        showClassificationToast(data);
+      })
+      .catch(function (err) {
+        console.error("[PocketZot] classify error:", err);
+      });
   }
 
   function storeClassification(prompt, classification) {
     try {
-      // Get existing classifications from localStorage
-      var stored = localStorage.getItem('pocketzot_classifications');
-      var classifications = stored ? JSON.parse(stored) : [];
-      
-      // Add new classification
-      classifications.push({
+      var list = JSON.parse(
+        localStorage.getItem("pocketzot_classifications") || "[]",
+      );
+      list.push({
         prompt: prompt,
         value: classification.value,
         suggestion: classification.suggestion,
         platform: detectPlatform(),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
-      // Keep only last 100 classifications to avoid storage limits
-      if (classifications.length > 100) {
-        classifications = classifications.slice(-100);
-      }
-      
-      // Save back to localStorage
-      localStorage.setItem('pocketzot_classifications', JSON.stringify(classifications));
-      
-      console.log('[PocketZot] Stored classification. Total:', classifications.length);
-    } catch (error) {
-      console.error('[PocketZot] Failed to store classification:', error);
+      if (list.length > 100) list = list.slice(-100);
+      localStorage.setItem("pocketzot_classifications", JSON.stringify(list));
+    } catch (e) {
+      console.error("[PocketZot] store error:", e);
     }
   }
 
   function showClassificationToast(classification) {
-    // Create a toast notification showing the classification
-    var toast = document.createElement('div');
-    toast.id = 'pocketzot-classification-toast';
-    
-    var emoji = '';
-    var color = '';
-    if (classification.value <= -2) {
-      emoji = '📝';
-      color = '#e74c3c';
-    } else if (classification.value === -1) {
-      emoji = '🔗';
-      color = '#f39c12';
-    } else if (classification.value === 1) {
-      emoji = '💡';
-      color = '#3498db';
-    } else if (classification.value === 2) {
-      emoji = '🎯';
-      color = '#2ecc71';
-    }
-    
+    var colors = {
+      "-3": "#e74c3c",
+      "-2": "#e74c3c",
+      "-1": "#f39c12",
+      1: "#3498db",
+      2: "#2ecc71",
+    };
+    var emojis = { "-3": "📝", "-2": "📝", "-1": "🔗", 1: "💡", 2: "🎯" };
+    var v = String(classification.value);
+    var toast = document.createElement("div");
     toast.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 2147483647;
-      background: ${color};
-      color: white;
-      border-radius: 8px;
-      padding: 16px 20px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      max-width: 300px;
-      opacity: 0;
-      transform: translateX(400px);
-      transition: all 0.3s ease;
+      position: fixed; top: 20px; right: 20px; z-index: 2147483647;
+      background: ${colors[v] || "#555"}; color: white; border-radius: 8px;
+      padding: 14px 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      font-family: -apple-system, sans-serif; max-width: 280px;
+      opacity: 0; transform: translateX(320px); transition: all 0.3s ease;
     `;
-    
-    toast.innerHTML = `
-      <div style="font-weight: 600; margin-bottom: 8px;">
-        ${emoji} Classification: ${classification.value}
-      </div>
-      ${classification.suggestion ? `<div style="font-size: 14px; opacity: 0.95;">${classification.suggestion}</div>` : ''}
-    `;
-    
+    toast.innerHTML =
+      '<div style="font-weight:600;margin-bottom:6px">' +
+      (emojis[v] || "") +
+      " Classification: " +
+      classification.value +
+      "</div>" +
+      (classification.suggestion
+        ? '<div style="font-size:13px;opacity:.95">' +
+          classification.suggestion +
+          "</div>"
+        : "");
     document.body.appendChild(toast);
-    
-    // Animate in
-    setTimeout(function() {
-      toast.style.opacity = '1';
-      toast.style.transform = 'translateX(0)';
+    setTimeout(function () {
+      toast.style.opacity = "1";
+      toast.style.transform = "translateX(0)";
     }, 10);
-    
-    // Auto-remove after 5 seconds
-    setTimeout(function() {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateX(400px)';
-      setTimeout(function() {
-        if (toast.parentNode) {
-          toast.remove();
-        }
+    setTimeout(function () {
+      toast.style.opacity = "0";
+      toast.style.transform = "translateX(320px)";
+      setTimeout(function () {
+        if (toast.parentNode) toast.remove();
       }, 300);
     }, 5000);
   }
 
   function startPromptMonitoring() {
     var platform = detectPlatform();
-    if (platform === 'unknown') {
-      console.log('[PocketZot] Unknown platform, skipping prompt monitoring');
+    if (platform === "unknown") {
+      console.log("[PocketZot] Unknown platform");
       return;
     }
+    console.log("[PocketZot] Monitoring:", platform);
 
-    console.log('[PocketZot] Starting prompt monitoring for:', platform);
     var selectors = getPromptSelectors(platform);
-    
     if (!selectors) return;
 
-    // Snapshot all currently-visible user message nodes as "already seen" —
-    // we register their identity so we never classify them, even if the DOM
-    // later mutates and shifts indices around.
-    var currentMessages = document.querySelectorAll(selectors.userMessage);
-    for (var i = 0; i < currentMessages.length; i++) {
-      seenNodes.add(currentMessages[i]);
-    }
-    lastPromptCount = currentMessages.length; // kept for logging only
-
-    console.log('[PocketZot] Baseline:', lastPromptCount, 'existing messages — these will NOT be classified');
-    console.log('[PocketZot] ✓ Only prompts sent AFTER clicking Start will be classified');
-    console.log('[PocketZot] To view stored classifications, run: window.PocketZotStorage.getClassifications()');
-
-    // Use MutationObserver to watch for new messages
-    var targetNode = document.querySelector(selectors.messageContainer);
-
-    function checkForNewPrompts() {
-      var userMessages = document.querySelectorAll(selectors.userMessage);
-
-      for (var i = 0; i < userMessages.length; i++) {
-        var node = userMessages[i];
-        if (seenNodes.has(node)) continue; // already processed or pre-existing
-        seenNodes.add(node);
-
-        var promptText = extractPromptText(node, platform);
-        if (promptText) {
-          console.log('[PocketZot] 📝 New user node detected');
-          onPromptDetected(promptText);
-        }
-      }
-    }
-
-    // Try the primary selector, then fallbacks
-    var targetNode = document.querySelector(selectors.messageContainer);
-    if (!targetNode && selectors.messageContainerFallbacks) {
-      for (var f = 0; f < selectors.messageContainerFallbacks.length; f++) {
-        targetNode = document.querySelector(selectors.messageContainerFallbacks[f]);
-        if (targetNode) {
-          console.log('[PocketZot] Found container via fallback:', selectors.messageContainerFallbacks[f]);
+    // Probe which selector exists (claude)
+    if (platform === "claude" && selectors.userMessageSelectors) {
+      for (var s = 0; s < selectors.userMessageSelectors.length; s++) {
+        if (document.querySelector(selectors.userMessageSelectors[s])) {
+          selectors.userMessage = selectors.userMessageSelectors[s];
           break;
         }
       }
+      console.log("[PocketZot] Selector:", selectors.userMessage);
     }
 
-    // If still not found, observe <body> as a last resort — broad but always works
-    if (!targetNode) {
-      targetNode = document.body;
-      console.log('[PocketZot] ⚠️ Could not find specific message container, falling back to <body>');
+    // Snapshot existing nodes — never classify them
+    var existing = document.querySelectorAll(selectors.userMessage);
+    for (var i = 0; i < existing.length; i++) seenNodes.add(existing[i]);
+    lastPromptCount = existing.length;
+    console.log("[PocketZot] Baseline:", lastPromptCount);
+
+    function checkForNewPrompts() {
+      var nodes = document.querySelectorAll(selectors.userMessage);
+      for (var i = 0; i < nodes.length; i++) {
+        var node = nodes[i];
+        if (seenNodes.has(node)) continue;
+        seenNodes.add(node);
+        var text = extractPromptText(node);
+        if (text) onPromptDetected(text);
+      }
     }
 
-    promptObserver = new MutationObserver(function() {
-      checkForNewPrompts();
-    });
+    // Resolve container
+    var container = selectors.messageContainer
+      ? document.querySelector(selectors.messageContainer)
+      : null;
+    if (!container && selectors.messageContainerFallbacks) {
+      for (var f = 0; f < selectors.messageContainerFallbacks.length; f++) {
+        container = document.querySelector(
+          selectors.messageContainerFallbacks[f],
+        );
+        if (container) break;
+      }
+    }
+    if (!container) {
+      container = document.body;
+      console.log("[PocketZot] Fallback: <body>");
+    }
 
-    promptObserver.observe(targetNode, {
-      childList: true,
-      subtree: true,
-    });
-
-    console.log('[PocketZot] ✓ Prompt observer attached to:', targetNode.tagName || targetNode);
+    promptObserver = new MutationObserver(checkForNewPrompts);
+    promptObserver.observe(container, { childList: true, subtree: true });
+    console.log("[PocketZot] ✓ Observer attached");
   }
 
-  // Show popover when content script loads
+  // ─── Init ───────────────────────────────────────────────────────────────────
   try {
-    console.log('[PocketZot] Creating popover...');
     createPopover();
-  } catch (err) {
-    console.error('[PocketZot] Popover creation failed:', err);
+  } catch (e) {
+    console.error("[PocketZot] Popover error:", e);
   }
 
-  // NOTE: startPromptMonitoring() is intentionally NOT called here.
-  // It is only called when the user clicks the Start button in the popover.
+  // startPromptMonitoring() called only on "Press me!" click, never on load.
 
-  // Expose helper functions globally for popup/frontend access
   window.PocketZotStorage = {
-    getClassifications: function() {
+    getClassifications: function () {
       try {
-        var stored = localStorage.getItem('pocketzot_classifications');
-        return stored ? JSON.parse(stored) : [];
-      } catch (error) {
-        console.error('[PocketZot] Failed to get classifications:', error);
+        return JSON.parse(
+          localStorage.getItem("pocketzot_classifications") || "[]",
+        );
+      } catch (e) {
         return [];
       }
     },
-    
-    getStats: function() {
-      var classifications = this.getClassifications();
+    getStats: function () {
+      var list = this.getClassifications();
       var stats = {
-        total: classifications.length,
+        total: list.length,
         byValue: {},
         byPlatform: {},
-        recent: classifications.slice(-10).reverse()
+        recent: list.slice(-10).reverse(),
       };
-      
-      // Count by classification value
-      classifications.forEach(function(c) {
+      list.forEach(function (c) {
         stats.byValue[c.value] = (stats.byValue[c.value] || 0) + 1;
         stats.byPlatform[c.platform] = (stats.byPlatform[c.platform] || 0) + 1;
       });
-      
       return stats;
     },
-    
-    clearAll: function() {
-      localStorage.removeItem('pocketzot_classifications');
-      console.log('[PocketZot] Cleared all classifications');
-    }
+    clearAll: function () {
+      localStorage.removeItem("pocketzot_classifications");
+    },
   };
-
 })();
