@@ -63,18 +63,18 @@ export default function WhatIsShePage({ onNext }) {
   return (
     <Box
       bg="var(--bg)"
-      border="3px solid var(--border)"
-      boxShadow="4px 4px 0 #6a5a4a"
+      border="3px"
+      h="590px"
     >
       <TitleBar />
       <Box p={5}>
         {/* Anteater + speech bubble */}
         <Box display="flex" alignItems="flex-start" gap={3} mb={4}>
           <Image
-            src="/Idle State.png"
+            src="HomeJump.png"
             boxSize="48px"
             objectFit="contain"
-            style={{ imageRendering: "pixelated" }}
+            style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }}
           />
           <Box
             position="relative"
