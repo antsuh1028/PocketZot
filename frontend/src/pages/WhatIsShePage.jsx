@@ -105,7 +105,7 @@ export default function WhatIsShePage({ onNext }) {
           textAlign="center"
           mr={6}
         >
-          Georgia is a web extension.
+          PocketZot is a web extension.
           <br /><br />
           It helps you learn with AI the right way!
         </Box>
