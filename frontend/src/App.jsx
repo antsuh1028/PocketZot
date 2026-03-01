@@ -36,6 +36,7 @@ export default function App() {
         --btn-bg: #c4b89a; --btn-border: #7a6a5a; --input-bg: #f0e8d8;
         --accent: #6a9a5a; --red: #c45a4a;
       }
+      html, body { background: var(--bg); }
     `;
     document.head.appendChild(style);
   }, []);

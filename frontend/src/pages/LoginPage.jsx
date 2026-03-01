@@ -57,8 +57,8 @@ export default function LoginPage({ onSuccess, onSwitchToSignup }) {
   };
 
   return (
-    <Box bg="var(--bg)" border="3px">
-      <Box p={5}>
+    <Box bg="var(--bg)" border="3px solid var(--border)" display="flex" flexDirection="column" flex={1} minHeight={0}>
+      <Box p={5} flexShrink={0}>
         <Text
           fontFamily={FONT}
           fontSize="4xl"
@@ -77,14 +77,20 @@ export default function LoginPage({ onSuccess, onSwitchToSignup }) {
             style={{ imageRendering: "pixelated" }}
           />
         </Box>
+      </Box>
 
-        {/* Brown center box with gradient effect */}
-        <Box
-          bg="linear-gradient(90deg, #8a7a6a 0%, #8a7a6a 80%, #5a4a3a 20%, #5a4a3a 100%)"
-          p={5}
-          mb={3}
-          borderRadius="5px 5px 0 0"
-        >
+      {/* Brown center box — extends to bottom */}
+      <Box
+        flex={1}
+        bg="linear-gradient(90deg, #8a7a6a 0%, #8a7a6a 80%, #5a4a3a 20%, #5a4a3a 100%)"
+        p={5}
+        pb={6}
+        borderRadius="5px 5px 0 0"
+        borderTop="3px solid #5a4a3a"
+        display="flex"
+        flexDirection="column"
+        minHeight={0}
+      >
           <PixInput
             label="User:"
             value={email}
@@ -106,7 +112,6 @@ export default function LoginPage({ onSuccess, onSwitchToSignup }) {
             </Text>
           )}
         </Box>
-      </Box>
     </Box>
   );
 }
