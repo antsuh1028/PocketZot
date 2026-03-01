@@ -7,7 +7,15 @@ export default function GoodCommandPage({ user, anteater, classification, onEnd 
   const name = anteater?.name || user?.name || "Georgia";
   const health = anteater?.health ?? 100;
   const ants = user?.ants ?? 0;
-  const suggestion = classification?.suggestion || "Keep it up!";
+  const value = Number(classification?.value);
+  const rawSuggestion = (classification?.suggestion || "").trim();
+  const fallbackSuggestion =
+    value === 2
+      ? "Great deep-learning question. Keep asking for reasoning and alternatives to build mastery."
+      : value === 1
+        ? "Nice question! Add one more follow-up asking for an example to strengthen understanding."
+        : "Keep it up!";
+  const suggestion = rawSuggestion || fallbackSuggestion;
 
   return (
     <Box bg="#31FF51" minH="100%" p={5}>

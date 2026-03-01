@@ -53,18 +53,57 @@ export default function App() {
     document.head.appendChild(style);
   }, []);
 
-  // Dev auto-login
+  // Dev auto-login and check for pending classification on mount
   useEffect(() => {
-    if (!DEV_MODE) return;
-    fetch(`${BACKEND_URL}/api/users/1`)
-      .then(r => r.ok ? r.json() : null)
-      .then(u => {
-        if (!u) return;
-        setUser(u);
-        localStorage.setItem("pocketzot_user", JSON.stringify(u));
-        setView("main");
-      })
-      .catch(() => {});
+    const initializeApp = async () => {
+      // First, check if there's a pending classification view
+      if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+        const data = await new Promise((resolve) => {
+          chrome.storage.local.get(["pocketzot_view_classification"], resolve);
+        });
+
+        if (data && data.pocketzot_view_classification) {
+          const cls = data.pocketzot_view_classification;
+          if (cls && typeof cls.value === "number") {
+            // Login user first
+            if (DEV_MODE) {
+              try {
+                const res = await fetch(`${BACKEND_URL}/api/users/1`);
+                if (res.ok) {
+                  const u = await res.json();
+                  setUser(u);
+                  localStorage.setItem("pocketzot_user", JSON.stringify(u));
+                }
+              } catch (e) {
+                console.error("Failed to auto-login:", e);
+              }
+            }
+            // Then navigate to classification view
+            setLastClassification(cls);
+            setView(cls.value > 0 ? "good" : "bad");
+            // Clear the pending request
+            chrome.storage.local.remove(["pocketzot_view_classification"]);
+            return;
+          }
+        }
+      }
+
+      // No pending classification, do regular dev auto-login
+      if (!DEV_MODE) return;
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/users/1`);
+        if (res.ok) {
+          const u = await res.json();
+          setUser(u);
+          localStorage.setItem("pocketzot_user", JSON.stringify(u));
+          setView("main");
+        }
+      } catch (e) {
+        console.error("Failed to auto-login:", e);
+      }
+    };
+
+    initializeApp();
   }, []);
 
   // Fetch anteater whenever user changes
@@ -196,6 +235,11 @@ export default function App() {
     }
     go("main");
   };
+
+  const handleViewClassification = (classification) => {
+    setLastClassification(classification);
+    go(classification.value > 0 ? "good" : "bad");
+  };
   return (
     <Box borderRadius="20px">
       {/* Fixed dev nav */}
@@ -279,7 +323,7 @@ export default function App() {
         {view === "idle"        && <IdlePage user={user} anteater={anteater} onEnd={handleEndToSummary} />}
         {view === "good"        && <GoodCommandPage user={user} anteater={anteater} classification={lastClassification} onEnd={handleEndToSummary} />}
         {view === "bad"         && <BadCommandPage user={user} anteater={anteater} classification={lastClassification} onEnd={handleEndToSummary} />}
-        {view === "summary"     && <StudySummaryPage user={user} anteater={anteater} classifications={sessionClassifications} onDone={handleEndToMain} />}
+        {view === "summary"     && <StudySummaryPage user={user} anteater={anteater} classifications={sessionClassifications} onDone={handleEndToMain} onViewClassification={handleViewClassification} />}
       </Box>
     </Box>
   );
