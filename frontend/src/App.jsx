@@ -21,15 +21,20 @@ const BACKEND_URL = "http://127.0.0.1:8000";
 async function clearInventory(uid, onUserUpdate) {
   try {
     await fetch(`${BACKEND_URL}/api/accessories/user/${uid}/clear-inventory`, { method: "POST" });
-    if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
-      chrome.runtime.sendMessage({ action: "EQUIP_HAT", hat: null });
-    }
+    resetEquippedHat();
     if (onUserUpdate) {
       const r = await fetch(`${BACKEND_URL}/api/users/${uid}`);
       const u = await r.json();
       onUserUpdate(u);
     }
   } catch (e) { /* ignore */ }
+}
+
+function resetEquippedHat() {
+  if (typeof chrome !== "undefined") {
+    if (chrome.storage?.local) chrome.storage.local.set({ pocketzot_equipped_hat: null });
+    if (chrome.runtime?.sendMessage) chrome.runtime.sendMessage({ action: "EQUIP_HAT", hat: null });
+  }
 }
 const PAGES = [
   "welcome",
@@ -144,6 +149,24 @@ export default function App() {
             </Button>
           ))}
           {user && (
+            <>
+            <Button
+              size="xs"
+              onClick={() => resetEquippedHat()}
+              bg="orange.100"
+              color="gray.800"
+              border="1px solid"
+              borderColor="orange.300"
+              borderRadius={0}
+              fontFamily="monospace"
+              fontSize="10px"
+              h="auto"
+              px={2}
+              py="2px"
+              _hover={{ opacity: 0.8 }}
+            >
+              Reset hat
+            </Button>
             <Button
               size="xs"
               onClick={() => clearInventory(user.id, setUser)}
@@ -161,6 +184,7 @@ export default function App() {
             >
               Clear inv
             </Button>
+            </>
           )}
         </Box>
       )}

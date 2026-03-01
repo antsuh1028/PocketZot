@@ -34,7 +34,7 @@ function copyContentScripts() {
         "Falling rotate -45 degree.png", "Idle State.png", "Plop.png",
         "WALK LEFT.png", "WALK RIGHT.png",
         "+1Ant.png", "neg1Ant.png",
-        "Plumber.png", "Merrier.png"
+        "Plumber.png", "Merrier.png", "Egg.png", "Crown.png"
       ];
       extraImages.forEach((f) => {
         const src = join(publicDir, f);
