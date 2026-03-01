@@ -63,7 +63,11 @@ function AnteaterPreview({ equippedHat }) {
             maxW="120%"
             maxH="70px"
             objectFit="contain"
-            style={{ marginTop: "-10px", imageRendering: "pixelated" }}
+            style={{
+              marginTop: equippedHat?.name?.toLowerCase?.().includes("merrier") ? "8px" : "-10px",
+              transform: equippedHat?.name?.toLowerCase?.().includes("merrier") ? "scaleX(-1)" : undefined,
+              imageRendering: "pixelated",
+            }}
           />
         </Box>
       )}
@@ -212,7 +216,7 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
         color="#000"
         textAlign="center"
         fontFamily={FONT}
-        fontSize="12px"
+        fontSize="14px"
         fontStyle="normal"
         fontWeight={400}
         lineHeight="normal"
@@ -223,30 +227,35 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
         {anteaterName}
       </Text>
 
-      {/* Walk sprite + equipped hat preview */}
-      <Box display="flex" justifyContent="center" mb={3}>
+      {/* Walk sprite + equipped hat preview - pushed down ~2 enter's space */}
+      <Box display="flex" justifyContent="center" mt={6} mb={3}>
         <Box transform="scale(1.15)">
           <AnteaterPreview equippedHat={equippedHat} />
         </Box>
       </Box>
 
-      {/* Bottom 1/3: drawer for items */}
-      <Box flex={1} minH="140px" px={4} pb={4} overflowY="auto" display="flex" flexDir="column">
+      {/* Hats section - ~1 enter below anteater, brown bg from here down */}
+      <Box flex={1} minH="140px" mt={4} px={4} py={3} pb={4} overflowY="auto" display="flex" flexDir="column" bg="#72645E">
+        <Text fontFamily={FONT} fontSize="medium" color="#000" mb={3}>
+          Hats:
+        </Text>
         <SimpleGrid columns={2} gap={3} flex={1}>
             {displayItems.map((item, i) => {
               const ua = item?.owned ? inventory.find((inv) => inv.id === item.user_accessory_id || (inv.accessory_id === item.id)) : null;
               const isClickFeedback = ua && clickFeedbackId === ua.id;
+              const isOwned = item?.owned ?? false;
               return (
               <Box
                 key={item?.id ?? i}
                 aspectRatio="1"
-                bg="var(--panel)"
+                bg="#B69D94"
                 border="2px solid var(--border)"
                 borderColor={isClickFeedback ? "green.500" : undefined}
                 boxShadow={isClickFeedback ? "0 0 0 3px rgba(34,197,94,0.6)" : undefined}
                 cursor={item ? "pointer" : "default"}
                 transform={isClickFeedback ? "scale(0.92)" : undefined}
                 transition="transform 0.1s, border-color 0.1s, box-shadow 0.1s"
+                position="relative"
                 onClick={() => {
                   if (!item) return;
                   if (item.owned) {
@@ -266,12 +275,34 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
                   w="80%"
                   h="80%"
                   objectFit="contain"
+                  style={{ imageRendering: "pixelated" }}
                 />
+              )}
+              {!isOwned && item && (
+                <>
+                  <Box
+                    position="absolute"
+                    inset={0}
+                    bg="gray"
+                    opacity={0.15}
+                    pointerEvents="none"
+                  />
+                  <Text
+                    position="absolute"
+                    bottom={1}
+                    right={1}
+                    fontFamily={FONT}
+                    fontSize="8px"
+                    color="#000"
+                    pointerEvents="none"
+                  >
+                    {(item?.price ?? 1)} 🐜
+                  </Text>
+                </>
               )}
             </Box>
           );})}
         </SimpleGrid>
-        </Box>
 
         {ownedHats.length > 0 && (
           <Box mb={4}>
@@ -312,7 +343,7 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
         )}
       </Box>
 
-      {/* Confirm buy overlay — full-screen popup */}
+      {/* Confirm buy overlay - full-screen popup */}
       {confirming && (
           <Box
             position="fixed"

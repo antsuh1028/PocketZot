@@ -154,7 +154,9 @@ var PZSprite = (function () {
     if (hat && hat.image_url) {
       var img = document.createElement('img');
       img.src = resolveAssetPath(hat.image_url);
-      img.style.cssText = 'max-width:140%;max-height:85px;object-fit:contain;transform-origin:bottom center;margin-top:-15px;';
+      var isMerrier = hat.name && String(hat.name).toLowerCase().indexOf('merrier') >= 0;
+      var extra = isMerrier ? 'margin-top:5px;transform:scaleX(-1);' : 'margin-top:-15px;';
+      img.style.cssText = 'max-width:140%;max-height:85px;object-fit:contain;transform-origin:bottom center;' + extra;
       img.alt = hat.name || 'hat';
       this._hatEl.appendChild(img);
     }
