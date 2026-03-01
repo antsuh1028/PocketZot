@@ -57,6 +57,21 @@ chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {
     return true; // keep channel open for async sendResponse
   }
 
+  if (message.action === 'EQUIP_HAT') {
+    var hat = message.hat || null;
+    chrome.storage.local.set({ pocketzot_equipped_hat: hat }, function () {
+      chrome.tabs.query({}, function (tabs) {
+        tabs.forEach(function (tab) {
+          try {
+            chrome.tabs.sendMessage(tab.id, { action: 'HAT_EQUIPPED', hat: hat }).catch(function () {});
+          } catch (e) {}
+        });
+      });
+    });
+    sendResponse({ ok: true });
+    return true;
+  }
+
   if (message.action === 'UPDATE_HEALTH') {
     chrome.storage.local.get(['userId', 'anteaterDetails'], function (data) {
       var userId = data.userId || 1; // Default to user ID 1

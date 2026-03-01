@@ -163,10 +163,12 @@ var PZSprite = (function () {
   };
 
   Sprite.prototype.unmount = function () {
+    if (this._hatEl) this._hatEl.innerHTML = '';
     if (this.el && this.el.parentNode) {
       this.el.parentNode.removeChild(this.el);
     }
     this.el = null;
+    this._hatEl = null;
   };
 
   /**
