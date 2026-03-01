@@ -1,12 +1,38 @@
-{
-  "manifest_version": 3,
-  "name": "PocketZot",
-  "version": "0.1.0",
-  "description": "A lightweight Chrome extension starter for PocketZot.",
-  "action": {
-    "default_title": "PocketZot",
-    "default_popup": "dist/pocket_zot.html"
-  },
-  "permissions": ["storage"],
-  "host_permissions": ["http://127.0.0.1:8000/*"]
-}
+  {
+    "manifest_version": 3,
+    "name": "PocketZot",
+    "version": "0.1.0",
+    "description": "A lightweight Chrome extension starter for PocketZot.",
+    "action": {
+      "default_title": "PocketZot",
+      "default_popup": "dist/pocket_zot.html"
+    },
+    "permissions": ["storage", "activeTab", "scripting"],
+    "host_permissions": ["<all_urls>"],
+"content_scripts": [{
+  "matches": [
+    "https://chatgpt.com/*",
+    "https://claude.ai/*",
+    "https://gemini.google.com/*",
+    "https://*.perplexity.ai/*"
+  ],
+  "js": [
+    "dist/anteaterchar/physics.js",
+    "dist/anteaterchar/stateMachine.js",
+    "dist/anteaterchar/sprite.js",
+    "dist/anteaterchar/dragController.js",
+    "dist/anteaterchar/anteater.js",
+    "dist/anteaterchar/messageListener.js"
+  ],
+  "run_at": "document_idle"
+}]
+
+
+  ,
+
+  "web_accessible_resources": [{
+    "resources": ["dist/anteaterchar/assets/*"],
+    "matches": ["<all_urls>"]
+  }]
+
+  }
