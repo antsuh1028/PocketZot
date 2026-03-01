@@ -31,7 +31,7 @@
   ,
 
   "web_accessible_resources": [{
-    "resources": ["dist/anteaterchar/assets/*"],
+    "resources": ["dist/anteaterchar/assets/*", "dist/*.png"],
     "matches": ["<all_urls>"]
   }]
 

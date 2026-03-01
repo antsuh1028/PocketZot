@@ -53,64 +53,92 @@
     popover.id = 'pocketzot-popover';
     
     popover.style.cssText = `
-      position: absolute;
-      bottom: 20px ;
+      position: fixed;
+      bottom: 20px;
       right: 20px;
       z-index: 2147483646;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      background: transparent;
+      border-radius: 16px;
+      padding: 12px;
+      box-shadow: none;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      color: white;
-      min-width: 240px;
-      max-width: 300px;
-      text-align: center;
+      color: #1f2937;
+      width: auto;
+      min-height: auto;
+      text-align: left;
+      box-sizing: border-box;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
     `;
 
-    var title = document.createElement('div');
-    title.textContent = '🐜 PocketZot';
-    title.style.cssText = `
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 10px;
-    `;
-
-    var description = document.createElement('div');
-    description.textContent = 'Spawn your anteater mascot to keep you company!';
-    description.style.cssText = `
-      font-size: 14px;
-      margin-bottom: 15px;
-      opacity: 0.95;
-      line-height: 1.4;
-    `;
-
-    var button = document.createElement('button');
-    button.textContent = 'Start';
-    button.style.cssText = `
-      background: white;
-      color: #667eea;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 20px;
-      font-weight: 600;
-      font-size: 14px;
+    var mascotPlaceholder = document.createElement('img');
+    mascotPlaceholder.src = chrome.runtime.getURL('dist/Idle State.png');
+    mascotPlaceholder.style.cssText = `
+      width: 80px;
+      height: 80px;
+      border-radius: 10px;
+      object-fit: contain;
+      user-select: none;
+      flex-shrink: 0;
       cursor: pointer;
-      transition: all 0.3s ease;
-      width: 100%;
-      margin-bottom: 8px;
+      transition: all 0.2s ease;
+      filter: brightness(1);
     `;
-
-    button.onmouseover = function() {
-      this.style.transform = 'scale(1.05)';
-      this.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+    
+    mascotPlaceholder.onmouseover = function() {
+      this.style.filter = 'brightness(0.9)';
     };
-    button.onmouseout = function() {
-      this.style.transform = 'scale(1)';
-      this.style.boxShadow = 'none';
+    mascotPlaceholder.onmouseout = function() {
+      this.style.filter = 'brightness(1)';
     };
 
-    button.onclick = function() {
+    var header = document.createElement('div');
+    header.textContent = 'Do you want to start PocketZot?';
+    header.style.cssText = `
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #1f2937;
+    `;
+    
+    var dialogueBox = document.createElement('div');
+    dialogueBox.style.cssText = `
+      background: #ffffff;
+      border: 2px solid #d1d5db;
+      border-radius: 12px;
+      padding: 12px 14px;
+      position: relative;
+      flex: 1;
+      min-width: 140px;
+      transition: all 0.2s ease;
+    `;
+    
+    var speechBubbleTail = document.createElement('div');
+    speechBubbleTail.style.cssText = `
+      position: absolute;
+      bottom: -8px;
+      left: 20px;
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 0px solid transparent;
+      border-top: 8px solid #ffffff;
+    `;
+    dialogueBox.appendChild(speechBubbleTail);
+
+    var dialogueText = document.createElement('div');
+    dialogueText.textContent = 'Press Me!';
+    dialogueText.style.cssText = `
+      font-size: 13px;
+      line-height: 1.4;
+      font-weight: 500;
+      margin: 0;
+      word-wrap: break-word;
+    `;
+    dialogueBox.appendChild(dialogueText);
+
+    mascotPlaceholder.onclick = function() {
       console.log('[PocketZot] Start button clicked');
       
       // Reset ALL session state before starting
@@ -138,40 +166,29 @@
       }, 300);
     };
 
-    var closeBtn = document.createElement('button');
-    closeBtn.textContent = '✕';
-    closeBtn.style.cssText = `
-      background: rgba(255, 255, 255, 0.2);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 6px 12px;
-      font-size: 16px;
-      cursor: pointer;
-      width: 100%;
-      transition: background 0.2s ease;
+    // var logoPlaceholder = document.createElement('div');
+    // logoPlaceholder.textContent = 'Logo placeholder';
+    // logoPlaceholder.style.cssText = `
+    //   margin-top: 10px;
+    //   font-size: 12px;
+    //   color: #3b82f6;
+    //   text-decoration: underline;
+    //   white-space: nowrap;
+    //   overflow: hidden;
+    //   text-overflow: ellipsis;
+    // `;
+
+    var contentContainer = document.createElement('div');
+    contentContainer.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 0;
     `;
+    contentContainer.appendChild(header);
+    contentContainer.appendChild(dialogueBox);
 
-    closeBtn.onmouseover = function() {
-      this.style.background = 'rgba(255, 255, 255, 0.3)';
-    };
-    closeBtn.onmouseout = function() {
-      this.style.background = 'rgba(255, 255, 255, 0.2)';
-    };
-
-    closeBtn.onclick = function() {
-      popover.style.opacity = '0';
-      popover.style.transform = 'scale(0.9)';
-      popover.style.transition = 'all 0.3s ease';
-      setTimeout(function() {
-        popover.remove();
-      }, 300);
-    };
-
-    popover.appendChild(title);
-    popover.appendChild(description);
-    popover.appendChild(button);
-    popover.appendChild(closeBtn);
+    popover.appendChild(mascotPlaceholder);
+    popover.appendChild(contentContainer);
 
     document.body.appendChild(popover);
 
