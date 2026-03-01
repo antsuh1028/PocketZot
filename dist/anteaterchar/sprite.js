@@ -17,7 +17,7 @@
 
 var PZSprite = (function () {
 
-  var TILE = 64; // px per sprite tile
+  var TILE = 32; // px per sprite tile
 
   // Map state name → array of { x, y } frame offsets in the sprite sheet
   //lined up for clarity
