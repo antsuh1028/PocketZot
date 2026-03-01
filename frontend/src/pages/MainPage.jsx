@@ -9,6 +9,17 @@ export default function MainPage({ user, onShop, onStart }) {
   const [anteater, setAnteater] = useState(null);
   const [isSpawned, setIsSpawned] = useState(false);
 
+  const refreshSpawnStatus = () => {
+    if (typeof chrome === "undefined" || !chrome.tabs) return;
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (!tabs || !tabs[0] || tabs[0].id == null) return;
+      chrome.tabs.sendMessage(tabs[0].id, { action: "STATUS" }, (response) => {
+        if (chrome.runtime && chrome.runtime.lastError) return;
+        setIsSpawned(Boolean(response && response.active));
+      });
+    });
+  };
+
   useEffect(() => {
     if (!user) return;
     fetch(`${BACKEND_URL}/api/anteaters`)
@@ -16,6 +27,19 @@ export default function MainPage({ user, onShop, onStart }) {
       .then((list) => setAnteater(list.find((a) => a.uid === user.id) || null))
       .catch(() => {});
   }, [user]);
+
+  useEffect(() => {
+    refreshSpawnStatus();
+
+    const interval = setInterval(refreshSpawnStatus, 1500);
+    const onFocus = () => refreshSpawnStatus();
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
 
   const handleSpawn = () => {
     if (isSpawned) return;
@@ -207,6 +231,7 @@ export default function MainPage({ user, onShop, onStart }) {
             bg="#00A93E"
             borderRadius="8px"
             onClick={handleSpawn}
+            disabled={isSpawned}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

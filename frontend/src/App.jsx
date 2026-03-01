@@ -25,6 +25,19 @@ export default function App() {
   const [lastClassification, setLastClassification] = useState(null);
   const [sessionClassifications, setSessionClassifications] = useState([]);
 
+  const normalizeClassification = (cls) => {
+    if (!cls) return null;
+    const direct = Number(cls.value);
+    if (Number.isFinite(direct)) return { ...cls, value: direct };
+
+    const raw = typeof cls.raw_response === "string" ? cls.raw_response : "";
+    const match = raw.match(/[-+]?\d+/);
+    if (!match) return null;
+    const parsed = Number(match[0]);
+    if (!Number.isFinite(parsed)) return null;
+    return { ...cls, value: parsed };
+  };
+
   // Inject global styles
   useEffect(() => {
     const style = document.createElement("style");
@@ -64,25 +77,42 @@ export default function App() {
       .catch(() => {});
   }, [user]);
 
-  // Listen for classifications from the content script
+  // Listen for classifications from shared extension storage
   useEffect(() => {
-    const handler = (e) => {
-      const cls = e?.detail?.classification;
-      if (!cls) return;
+    if (typeof chrome === "undefined" || !chrome.storage || !chrome.storage.local) return;
+
+    const applyClassificationList = (rawList) => {
+      const list = Array.isArray(rawList) ? rawList : [];
+      const normalized = list.map(normalizeClassification).filter(Boolean);
+      setSessionClassifications(normalized);
+
+      const cls = normalized.length ? normalized[normalized.length - 1] : null;
       setLastClassification(cls);
-      setSessionClassifications(prev => [...prev, cls]);
-      // Re-fetch anteater to get updated health
+
+      if (cls && view === "idle") {
+        go(cls.value > 0 ? "good" : "bad");
+      }
+    };
+
+    chrome.storage.local.get(["pocketzot_classifications"], (data) => {
+      applyClassificationList(data && data.pocketzot_classifications);
+    });
+
+    const onChanged = (changes, areaName) => {
+      if (areaName !== "local" || !changes.pocketzot_classifications) return;
+      applyClassificationList(changes.pocketzot_classifications.newValue);
+
       if (user) {
         fetch(`${BACKEND_URL}/api/anteaters`)
           .then(r => r.json())
           .then(list => setAnteater(list.find(a => a.uid === user.id) || null))
           .catch(() => {});
       }
-      go(cls.value > 0 ? "good" : "bad");
     };
-    window.addEventListener("pocketzot:classification", handler);
-    return () => window.removeEventListener("pocketzot:classification", handler);
-  }, [user]);
+
+    chrome.storage.onChanged.addListener(onChanged);
+    return () => chrome.storage.onChanged.removeListener(onChanged);
+  }, [user, view]);
 
   const go = (v) => setView(v);
 
@@ -93,13 +123,36 @@ export default function App() {
 
   const handleMeetNext = (name) => {
     if (!user || !name?.trim()) { go("whatisshe"); return; }
-    fetch(`${BACKEND_URL}/api/anteaters/user/${user.id}/name`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim() }),
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(updated => { if (updated) setAnteater(updated); })
+
+    const trimmedName = name.trim();
+
+    fetch(`${BACKEND_URL}/api/anteaters`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => {
+        const existing = list.find((a) => a.uid === user.id);
+
+        if (existing) {
+          return fetch(`${BACKEND_URL}/api/anteaters/${existing.id}/name`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: trimmedName }),
+          }).then((r) => (r.ok ? r.json() : null));
+        }
+
+        return fetch(`${BACKEND_URL}/api/anteaters`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: trimmedName,
+            health: 100,
+            is_dead: false,
+            uid: user.id,
+          }),
+        }).then((r) => (r.ok ? r.json() : null));
+      })
+      .then((updatedOrCreated) => {
+        if (updatedOrCreated) setAnteater(updatedOrCreated);
+      })
       .catch(() => {})
       .finally(() => go("whatisshe"));
   };
@@ -121,6 +174,11 @@ export default function App() {
   };
 
   const handleStartToIdle = () => {
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({ pocketzot_classifications: [] });
+    }
+    setSessionClassifications([]);
+    setLastClassification(null);
     spawnAnteater();
     go("idle");
   };
@@ -133,6 +191,10 @@ export default function App() {
   const handleEndToMain = () => {
     despawnAnteater();
     setSessionClassifications([]);
+    setLastClassification(null);
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({ pocketzot_classifications: [] });
+    }
     go("main");
   };
   return (
