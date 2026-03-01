@@ -48,6 +48,27 @@ export default function MainPage({ user, onShop, onStart }) {
     setIsSpawned(true);
   };
 
+  const handleDespawn = () => {
+    if (!isSpawned) return;
+
+    if (typeof chrome === "undefined" || !chrome.tabs) return;
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (!tabs || !tabs[0] || tabs[0].id == null) return;
+      chrome.tabs.sendMessage(tabs[0].id, { action: "DESPAWN" }, () => {
+        setIsSpawned(false);
+        refreshSpawnStatus();
+      });
+    });
+  };
+
+  const handleButtonClick = () => {
+    if (isSpawned) {
+      handleDespawn();
+    } else {
+      handleSpawn();
+    }
+  };
+
   const name = anteater?.name || user?.name || "Georgia";
   const health = anteater?.health ?? 100;
   const ants = user?.ants ?? 0;
@@ -227,11 +248,10 @@ export default function MainPage({ user, onShop, onStart }) {
         <Box w="55%">
           <PixBtn
             fullWidth
-            variant="green"
-            bg="#00A93E"
+            variant={isSpawned ? "red" : "green"}
+            bg={isSpawned ? "#E05050" : "#00A93E"}
             borderRadius="8px"
-            onClick={handleSpawn}
-            disabled={isSpawned}
+            onClick={handleButtonClick}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -241,27 +261,27 @@ export default function MainPage({ user, onShop, onStart }) {
               fill="none"
             >
               <g filter="url(#filter0_d_145_1630)">
-                <rect width="1.74222" height="9.62803" fill="#27CA40" />
+                <rect width="1.74222" height="9.62803" fill={isSpawned ? "#FF6B6B" : "#27CA40"} />
                 <rect
                   x="0.825317"
                   y="0.916992"
                   width="1.74222"
                   height="7.79412"
-                  fill="#27CA40"
+                  fill={isSpawned ? "#FF6B6B" : "#27CA40"}
                 />
                 <rect
                   x="1.65051"
                   y="2.20068"
                   width="1.74222"
                   height="5.22665"
-                  fill="#27CA40"
+                  fill={isSpawned ? "#FF6B6B" : "#27CA40"}
                 />
                 <rect
                   x="2.75098"
                   y="3.30103"
                   width="1.74222"
                   height="3.02595"
-                  fill="#27CA40"
+                  fill={isSpawned ? "#FF6B6B" : "#27CA40"}
                 />
               </g>
               <defs>
@@ -302,7 +322,7 @@ export default function MainPage({ user, onShop, onStart }) {
                 </filter>
               </defs>
             </svg>
-            {isSpawned ? "Agent Running!" : "Start"}
+            {isSpawned ? "Stop Agent" : "Start"}
           </PixBtn>
         </Box>
       </Box>
