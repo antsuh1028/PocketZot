@@ -9,6 +9,7 @@ from .api.anteater import router as anteater_router
 from .api.ants import router as ants_router
 from .api.user import router as user_router
 from .api.accessory import router as accessory_router
+from .api.classifier import router as classifier_router
 from .db import check_db_connection, get_db_engine
 
 
@@ -59,6 +60,7 @@ def create_app() -> FastAPI:
 	app.include_router(anteater_router)
 	app.include_router(ants_router)
 	app.include_router(accessory_router)
+	app.include_router(classifier_router)
 
 	return app
 
