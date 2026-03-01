@@ -8,6 +8,50 @@ import {
 } from "@chakra-ui/react";
 import Header from "../components/Header.jsx";
 
+export function PixBtn({
+  children,
+  onClick,
+  fullWidth,
+  variant = "default",
+  bg,
+  color,
+  border,
+}) {
+  const variantStyles = {
+    default: {
+      bg: "var(--btn-bg)",
+      color: "var(--dark)",
+      border: "2px solid var(--btn-border)",
+    },
+    green: {
+      bg: "#7ab86a",
+      color: "#1f2a1a",
+      border: "2px solid #4d7f41",
+    },
+  };
+
+  const style = variantStyles[variant] || variantStyles.default;
+
+  return (
+    <Button
+      onClick={onClick}
+      width={fullWidth ? "100%" : "auto"}
+      minH="34px"
+      px={4}
+      bg={bg || style.bg}
+      color={color || style.color}
+      border={border || style.border}
+      borderRadius={0}
+      fontFamily="'Press Start 2P', monospace"
+      fontSize="9px"
+      _hover={{ filter: "brightness(0.95)" }}
+      _active={{ transform: "translateY(1px)" }}
+    >
+      {children}
+    </Button>
+  );
+}
+
 export default function WelcomePage({ onSignUp, onLogIn }) {
   return (
     <Box minW="375px" minH="400px" bg="gray.50" color="gray.800" p={4}>
