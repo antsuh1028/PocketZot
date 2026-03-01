@@ -86,7 +86,7 @@ export default function LoginPage({ onSuccess, onSwitchToSignup }) {
           borderRadius="5px 5px 0 0"
         >
           <PixInput
-            label="User:"
+            label="Email:"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />

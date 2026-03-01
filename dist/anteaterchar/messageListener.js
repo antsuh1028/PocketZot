@@ -262,7 +262,11 @@
           return;
         }
         if (response && response.ok && response.data) {
-          var data = response.data;
+          var data = normalizeClassification(response.data);
+          if (!data) {
+            console.error("[PocketZot] classify error: invalid value", response.data);
+            return;
+          }
           console.log("[PocketZot] Classification:", data);
           storeClassification(promptText, data);
           updateAnteaterHealth(data.value);
@@ -276,6 +280,28 @@
         }
       },
     );
+  }
+
+  function parseClassificationValue(data) {
+    if (!data) return null;
+    var direct = Number(data.value);
+    if (!Number.isNaN(direct) && Number.isFinite(direct)) return direct;
+
+    var raw = data.raw_response;
+    if (typeof raw === "string") {
+      var m = raw.match(/[-+]?\d+/);
+      if (m) {
+        var parsed = Number(m[0]);
+        if (!Number.isNaN(parsed) && Number.isFinite(parsed)) return parsed;
+      }
+    }
+    return null;
+  }
+
+  function normalizeClassification(data) {
+    var parsedValue = parseClassificationValue(data);
+    if (parsedValue === null) return null;
+    return Object.assign({}, data, { value: parsedValue });
   }
 
   function updateAnteaterHealth(classificationValue) {
@@ -297,18 +323,39 @@
 
   function storeClassification(prompt, classification) {
     try {
-      var list = JSON.parse(
-        localStorage.getItem("pocketzot_classifications") || "[]",
-      );
-      list.push({
+      var entry = {
         prompt: prompt,
         value: classification.value,
         suggestion: classification.suggestion,
         platform: detectPlatform(),
         timestamp: new Date().toISOString(),
-      });
+      };
+
+      var list = JSON.parse(
+        localStorage.getItem("pocketzot_classifications") || "[]",
+      );
+      list.push(entry);
       if (list.length > 100) list = list.slice(-100);
       localStorage.setItem("pocketzot_classifications", JSON.stringify(list));
+
+      if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.get(["pocketzot_classifications"], function (data) {
+          try {
+            var shared = Array.isArray(data && data.pocketzot_classifications)
+              ? data.pocketzot_classifications
+              : [];
+            shared.push(entry);
+            if (shared.length > 100) shared = shared.slice(-100);
+            chrome.storage.local.set({ pocketzot_classifications: shared });
+          } catch (_e) {
+            // ignore storage sync errors
+          }
+        });
+      }
+
+      if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({ action: "CLASSIFICATION_EVENT", classification: entry }, function () {});
+      }
 
       // simply expose the full classification object to other scripts
       window.PocketZotLastClassification = classification;

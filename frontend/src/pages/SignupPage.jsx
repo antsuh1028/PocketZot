@@ -63,7 +63,7 @@
             borderRadius="5px 5px 0 0"
           >
             <PixInput
-              label="User:"
+              label="Email:"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />

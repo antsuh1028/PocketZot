@@ -122,13 +122,36 @@ export default function App() {
 
   const handleMeetNext = (name) => {
     if (!user || !name?.trim()) { go("whatisshe"); return; }
-    fetch(`${BACKEND_URL}/api/anteaters/user/${user.id}/name`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim() }),
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(updated => { if (updated) setAnteater(updated); })
+
+    const trimmedName = name.trim();
+
+    fetch(`${BACKEND_URL}/api/anteaters`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => {
+        const existing = list.find((a) => a.uid === user.id);
+
+        if (existing) {
+          return fetch(`${BACKEND_URL}/api/anteaters/${existing.id}/name`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: trimmedName }),
+          }).then((r) => (r.ok ? r.json() : null));
+        }
+
+        return fetch(`${BACKEND_URL}/api/anteaters`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: trimmedName,
+            health: 100,
+            is_dead: false,
+            uid: user.id,
+          }),
+        }).then((r) => (r.ok ? r.json() : null));
+      })
+      .then((updatedOrCreated) => {
+        if (updatedOrCreated) setAnteater(updatedOrCreated);
+      })
       .catch(() => {})
       .finally(() => go("whatisshe"));
   };
