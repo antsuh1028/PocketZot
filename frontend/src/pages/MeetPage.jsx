@@ -55,7 +55,7 @@ export default function MeetPage({ onNext }) {
   const [name, setName] = useState("");
 
   return (
-    <Box bg="var(--bg)" border="3px" h="590px">
+    <Box bg="var(--bg)" border="3px" h="560px">
       <TitleBar />
       <Box p={5}>
         <Text
