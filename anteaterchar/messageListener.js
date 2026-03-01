@@ -65,7 +65,7 @@
       right: 10px;
       font-size: 13px;
       font-weight: 600;
-      color: #111827;
+      color: #ffffff;
       line-height: 1.35;
       text-align: center;
     `;
@@ -278,6 +278,12 @@
       });
       if (list.length > 100) list = list.slice(-100);
       localStorage.setItem("pocketzot_classifications", JSON.stringify(list));
+
+      // simply expose the full classification object to other scripts
+      window.PocketZotLastClassification = classification;
+      window.dispatchEvent(new CustomEvent('pocketzot:classification', {
+        detail: { classification: classification },
+      }));
     } catch (e) {
       console.error("[PocketZot] store error:", e);
     }
@@ -423,5 +429,65 @@
     clearAll: function () {
       localStorage.removeItem("pocketzot_classifications");
     },
+    // helpers for external scripts
+    onClassification: function (cb) {
+      if (typeof cb === 'function') {
+        window.addEventListener('pocketzot:classification', function (e) {
+          cb(e.detail.classification);
+        });
+      }
+    },
+    getLastClassification: function () {
+      return window.PocketZotLastClassification || null;
+    },
   };
+
+  // ------------------------------------------------------------
+  // helper to drop PNGs around the mascot element when a classification
+  // arrives.  The caller passes the raw classification object and the
+  // routine will schedule `count = Math.abs(value) * 12` images to be
+  // created at random offsets (±30px X, 0..-20px Y) relative to the
+  // current sprite position.  Images are spaced ~250ms apart so they
+  // don’t overload the page; each one auto‑cleans after a couple seconds.
+  //
+  // You can change `imageUrl` to point at whatever PNG you like; the
+  // example uses a file in the extension’s `dist` folder.
+  // ------------------------------------------------------------
+  function sprinkleAroundSprite(classification) {
+    var value = classification && classification.value;
+    if (typeof value !== 'number') return;
+    var total = Math.abs(value) * 12;
+    if (total <= 0) return;
+
+    var sprite = document.getElementById('pocketzot-mascot');
+    if (!sprite) return;
+    var rect = sprite.getBoundingClientRect();
+    var imgUrl = chrome.runtime.getURL('dist/ANT.png'); // replace with your file
+
+    var placed = 0;
+    function placeNext() {
+      if (placed >= total) return;
+      var img = document.createElement('img');
+      img.src = imgUrl;
+      img.style.position = 'fixed';
+      img.style.pointerEvents = 'none';
+      img.style.width = '32px';
+      img.style.height = '32px';
+      // random offset: ±30px horizontal, -0..20px vertical (upwards only)
+      var offsetX = Math.random() * 60 - 30;
+      var offsetY = -Math.random() * 20;
+      img.style.left = rect.left + offsetX + 'px';
+      img.style.top  = rect.top  + offsetY + 'px';
+      document.body.appendChild(img);
+      setTimeout(function () { img.remove(); }, 2000);
+      placed++;
+      setTimeout(placeNext, 250);
+    }
+    placeNext();
+  }
+
+  // automatically trigger the sprinkle when a classification event fires
+  window.addEventListener('pocketzot:classification', function (e) {
+    sprinkleAroundSprite(e.detail.classification);
+  });
 })();
