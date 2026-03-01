@@ -31,7 +31,9 @@ function copyContentScripts() {
       const publicDir = resolve(__dirname, "frontend/public");
       const extraImages = [
         "Drag Left.png", "Drag Right.png", "Grab State.png",
-        "Falling rotate -45 degree.png", "Idle State.png", "Plop.png"
+        "Falling rotate -45 degree.png", "Idle State.png", "Plop.png",
+        "WALK LEFT.png", "WALK RIGHT.png",
+        "+1Ant.png", "neg1Ant.png"
       ];
       extraImages.forEach((f) => {
         const src = join(publicDir, f);

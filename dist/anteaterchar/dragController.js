@@ -47,6 +47,7 @@ var PZDrag = (function () {
 
   DragController.prototype._onDown = function (e) {
     if (e.button !== 0) return;
+    if (this.fsm.state === 'MOUSE_GRAB') return;
     e.preventDefault();
     e.stopPropagation();
 

@@ -47,7 +47,10 @@ var PZSprite = (function () {
   var PLACEHOLDER = {
     FALLING : { image: ASSETS + 'Falling rotate -45 degree.png' },
     LANDING : { image: ASSETS + 'Plop.png' },
-    WALKING : { image: ASSETS + 'mm.png' },
+    WALKING : {
+      walkLeft  : ASSETS + 'WALK LEFT.png',
+      walkRight : ASSETS + 'WALK RIGHT.png',
+    },
     IDLE    : { image: ASSETS + 'Idle State.png' },
     DRAGGED : {
       dragImages: {
@@ -74,9 +77,12 @@ var PZSprite = (function () {
   
   function resolveAssetPath(p) {
     if (!p) return p;
-    if (/^(?:https?:|data:|file:|\/)/i.test(p)) return p;
+    if (/^(?:https?:|data:|chrome-extension:)/i.test(p)) return p;
     if (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function') {
-      try { return chrome.runtime.getURL(p); } catch (e) { /* fallthrough */ }
+      try {
+        var url = chrome.runtime.getURL(p);
+        return url;
+      } catch (e) { /* fallthrough */ }
     }
     try { return new URL(p, location.href).href; } catch (e) { return p; }
   }
@@ -115,15 +121,6 @@ var PZSprite = (function () {
 
     this.el = el;
     document.body.appendChild(el);
-
-    this.attachSprinkleListener({
-    posImage: ASSETS + '+1Ant.png',
-    negImage: ASSETS + '-1Ant.png',
-    multiplier: 12,
-    intervalMs: 250,
-    imgSize: 32,
-    lifeMs: 2000
-    });
   };
 
   Sprite.prototype.unmount = function () {
@@ -155,25 +152,40 @@ var PZSprite = (function () {
       var angleDeg = angleRad * (180 / Math.PI);
       this.el.style.transform = 'rotate(' + angleDeg + 'deg)';
     } else {
-      this.el.style.transform = direction < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+      // Images face left; walking right needs scaleX(-1) to face right
+      this.el.style.transform = direction > 0 ? 'scaleX(-1)' : 'scaleX(1)';
     }
 
     if (this._spriteUrl) {
       this._advanceFrame(state, dt);
     } else {
+      if (state === 'WALKING' || state === 'MOUSE_GRAB') {
+        this._walkFootMsElapsed = (this._walkFootMsElapsed || 0) + dt;
+        if (this._walkFootMsElapsed >= 500) {
+          this._walkFootMsElapsed = 0;
+          this._walkFoot = (this._walkFoot === 0 ? 1 : 0);
+        }
+        if (this._walkFoot === undefined) this._walkFoot = 0;
+      } else {
+        this._walkFootMsElapsed = 0;
+        this._walkFoot = 0;
+      }
       this._renderPlaceholder(state, direction, body);
     }
   };
 
   Sprite.prototype._renderPlaceholder = function (state, direction, body) {
-    var p = PLACEHOLDER[state] || PLACEHOLDER.IDLE;
+    var p = PLACEHOLDER[state] || (state === 'MOUSE_GRAB' ? PLACEHOLDER.WALKING : null) || PLACEHOLDER.IDLE;
     // no background color — show PNG transparency
     this.el.style.backgroundColor = 'transparent';
 
     // DRAGGED: pick image by movement direction (no transform; images already oriented)
     // THROWN: pick image by throw direction (vx)
+    // WALKING: alternate walk left / walk right every 500ms (foot forward); transform flips for right direction
     var img = p.image;
-    if (state === 'DRAGGED' && p.dragImages) {
+    if ((state === 'WALKING' || state === 'MOUSE_GRAB') && p && p.walkLeft && p.walkRight) {
+      img = this._walkFoot ? p.walkRight : p.walkLeft;
+    } else if (state === 'DRAGGED' && p.dragImages) {
       img = direction > 0 ? p.dragImages.right : (direction < 0 ? p.dragImages.left : p.dragImages.grab);
     } else if (state === 'THROWN' && p.throwImages && body) {
       var vx = body.vx || 0;
@@ -194,84 +206,6 @@ var PZSprite = (function () {
       this.el.textContent = p.emoji || '';
     }
   };
-
-  // ---------- sprinkle animation helpers ----------
-  Sprite.prototype.sprinkleFromClassification = function (classification, opts) {
-    opts = opts || {};
-    var value = Number(classification && classification.value);
-    if (!Number.isFinite(value) || value === 0) return;
-
-    var multiplier = opts.multiplier || 12;
-    var intervalMs  = opts.intervalMs  || 250;
-    var lifeMs      = opts.lifeMs      || 2000;
-    var imgSize     = opts.imgSize     || 32;
-    var xRange      = opts.xRange      || 30;
-    var yRangeUp    = opts.yRangeUp    || 20;
-    var capMax      = opts.capMax      || 250;
-
-    var count = Math.min(Math.abs(Math.floor(value)) * multiplier, capMax);
-    if (count <= 0) return;
-
-    var spriteEl = this.el || document.getElementById('pocketzot-mascot');
-    if (!spriteEl) {
-      setTimeout(() => this.sprinkleFromClassification(classification, opts), 200);
-      return;
-    }
-    var rect = spriteEl.getBoundingClientRect();
-
-    var posImage = resolveAssetPath(opts.posImage || ASSETS + '+1Ant.png');
-    var negImage = resolveAssetPath(opts.negImage || ASSETS + '-1Ant.png');
-    var imgUrl = value >= 0 ? posImage : negImage;
-
-    for (let i = 0; i < count; i++) {
-      setTimeout(() => {
-        var img = document.createElement('img');
-        img.src = imgUrl;
-        img.style.position = 'fixed';
-        img.style.pointerEvents = 'none';
-        img.style.zIndex = 2147483648;
-        img.style.width = imgSize + 'px';
-        img.style.height = imgSize + 'px';
-        img.style.transition = 'transform 200ms ease, opacity 200ms ease';
-        var offsetX = Math.random() * (xRange * 2) - xRange;
-        var offsetY = -Math.random() * yRangeUp;
-        var left = rect.left + offsetX;
-        var top  = rect.top  + offsetY;
-        img.style.left = Math.round(left) + 'px';
-        img.style.top  = Math.round(top)  + 'px';
-        img.style.opacity = '0';
-        document.body.appendChild(img);
-        requestAnimationFrame(() => { img.style.opacity = '1'; img.style.transform = 'scale(1.05)'; });
-        setTimeout(() => { img.style.opacity = '0'; img.style.transform = 'scale(0.9)'; }, Math.max(0, lifeMs - 250));
-        setTimeout(() => { if (img.parentNode) img.parentNode.removeChild(img); }, lifeMs);
-      }, i * intervalMs);
-    }
-  };
-
-  Sprite.prototype.attachSprinkleListener = function (opts) {
-    opts = opts || {};
-    var self = this;
-    var handler = function (e) {
-      var cls = e && e.detail && e.detail.classification;
-      if (!cls) return;
-      self.sprinkleFromClassification(cls, opts);
-    };
-    if (window.PocketZotStorage && typeof window.PocketZotStorage.onClassification === 'function') {
-      window.PocketZotStorage.onClassification(function (cls) { self.sprinkleFromClassification(cls, opts); });
-    } else {
-      window.addEventListener('pocketzot:classification', handler);
-      this._pzSprinkleHandler = handler;
-    }
-  };
-
-  Sprite.prototype.detachSprinkleListener = function () {
-    if (this._pzSprinkleHandler) {
-      window.removeEventListener('pocketzot:classification', this._pzSprinkleHandler);
-      this._pzSprinkleHandler = null;
-    }
-  };
-
-  // ---------- end sprinkle helpers ----------
 
   Sprite.prototype._advanceFrame = function (state, dt) {
     var frames = FRAMES[state] || FRAMES.IDLE;
