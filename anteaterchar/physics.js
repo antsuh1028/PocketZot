@@ -10,9 +10,12 @@
  */
 
 var PZPhysics = (function () {
-  var GRAVITY         = 0.55;
-  var TERMINAL_VEL    = 20;
-  var WALK_SPEED      = 1.8;
+  var GRAVITY         = 0.16;
+  var TERMINAL_VEL    = 14;
+  var FLOOR_OFFSET    = 25; // px above bottom (set small value if clipping into taskbar)
+  var WALK_SPEED         = 0.375; // was 0.5; reduced by 1/4
+  var MOUSE_GRAB_RUN_SPEED = 3.0;  // 2.5x faster (was 1.2); px/frame at 60fps
+  var MOUSE_GRAB_JUMP_SPEED = 14;  // velocity magnitude toward cursor (px/frame)
   var FRICTION        = 0.80;
   var THROW_AIR_DAMP  = 0.97;
   var MAX_THROW_SPEED = 22;
@@ -60,7 +63,7 @@ var PZPhysics = (function () {
     this.y += this.vy;
 
     // Collision
-    var floorY = viewportH - this.h;
+    var floorY = viewportH - this.h - FLOOR_OFFSET;
 
     // Floor
     if (this.y >= floorY) {
@@ -123,5 +126,5 @@ var PZPhysics = (function () {
     this.onGround = false;
   };
 
-  return { PhysicsBody: PhysicsBody };
+  return { PhysicsBody: PhysicsBody, GRAVITY: GRAVITY, MOUSE_GRAB_RUN_SPEED: MOUSE_GRAB_RUN_SPEED, MOUSE_GRAB_JUMP_SPEED: MOUSE_GRAB_JUMP_SPEED, FLOOR_OFFSET: FLOOR_OFFSET };
 })();

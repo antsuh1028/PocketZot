@@ -15,9 +15,10 @@
  *   Row 5: Thrown  (1 frame)
  */
 
+
 var PZSprite = (function () {
 
-  var TILE = 64; // px per sprite tile
+  var TILE = 88; // px per sprite tile
 
   // Map state name → array of { x, y } frame offsets in the sprite sheet
   //lined up for clarity
@@ -40,16 +41,30 @@ var PZSprite = (function () {
     THROWN  : 999,
   };
 
-  // Placeholder: state → color & emoji 
+  var ASSETS = 'dist/anteaterchar/assets/';
 
   //FIXME: remove when using real sprite sheet
   var PLACEHOLDER = {
-    FALLING : { color: '#ff6b35', emoji: '😱' },
-    LANDING : { color: '#ff6b35', emoji: '💥' },
-    WALKING : { color: '#f0b429', emoji: '🐜' },
-    IDLE    : { color: '#4caf50', emoji: '😴' },
-    DRAGGED : { color: '#9c27b0', emoji: '😮' },
-    THROWN  : { color: '#e91e63', emoji: '🌀' },
+    FALLING : { image: ASSETS + 'Falling rotate -45 degree.png' },
+    LANDING : { image: ASSETS + 'Plop.png' },
+    WALKING : {
+      walkLeft  : ASSETS + 'WALK LEFT.png',
+      walkRight : ASSETS + 'WALK RIGHT.png',
+    },
+    IDLE    : { image: ASSETS + 'Idle State.png' },
+    DRAGGED : {
+      dragImages: {
+        grab  : ASSETS + 'Grab State.png',
+        left  : ASSETS + 'Drag Left.png',
+        right : ASSETS + 'Drag Right.png',
+      },
+    },
+    THROWN  : {
+      throwImages: {
+        left  : ASSETS + 'Drag Left.png',
+        right : ASSETS + 'Drag Right.png',
+      },
+    },
   };
 
   function Sprite(spriteUrl) {
@@ -58,6 +73,18 @@ var PZSprite = (function () {
     this._frame     = 0;
     this._frameMsElapsed = 0;
     this._lastState = null;
+  }
+  
+  function resolveAssetPath(p) {
+    if (!p) return p;
+    if (/^(?:https?:|data:|chrome-extension:)/i.test(p)) return p;
+    if (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function') {
+      try {
+        var url = chrome.runtime.getURL(p);
+        return url;
+      } catch (e) { /* fallthrough */ }
+    }
+    try { return new URL(p, location.href).href; } catch (e) { return p; }
   }
 
   Sprite.prototype.mount = function () {
@@ -75,22 +102,21 @@ var PZSprite = (function () {
       cursor        : 'grab',
       userSelect    : 'none',
       overflow      : 'hidden',
-      borderRadius  : '10px',
+      borderRadius  : '0',
+      border        : 'none',
+      outline       : 'none',
+      boxShadow     : 'none',
       display       : 'flex',
       alignItems    : 'center',
       justifyContent: 'center',
       fontSize      : '32px',
-      boxShadow     : '0 3px 10px rgba(0,0,0,0.25)',
-      transition    : 'background-color 0.08s',
+      backgroundColor: 'transparent',
       willChange    : 'transform, left, top', // GPU hint
     });
 
     if (this._spriteUrl) {
       el.style.backgroundImage  = 'url(' + this._spriteUrl + ')';
       el.style.backgroundRepeat = 'no-repeat';
-      el.style.backgroundColor  = 'transparent';
-      el.style.boxShadow        = 'none';
-      el.style.borderRadius     = '0';
     }
 
     this.el = el;
@@ -105,30 +131,80 @@ var PZSprite = (function () {
   };
 
   /**
-   * update(x, y, state, direction, dt)
-   * Called every animation frame.
+   * update(x, y, state, direction, dt, body)
+   * Called every animation frame. body optional (for THROWN velocity/rotation).
    */
-  Sprite.prototype.update = function (x, y, state, direction, dt) {
+  Sprite.prototype.update = function (x, y, state, direction, dt, body) {
     if (!this.el) return;
 
     // Position via left/top (GPU-composited with will-change)
     this.el.style.left = Math.round(x) + 'px';
     this.el.style.top  = Math.round(y) + 'px';
 
-    // Horizontal flip
-    this.el.style.transform = direction < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+    // Transform: DRAGGED = none; FALLING = none; THROWN = rotate by velocity arc; else horizontal flip
+    if (state === 'DRAGGED' || state === 'FALLING') {
+      this.el.style.transform = 'none';
+    } else if (state === 'THROWN' && body) {
+      var vx = body.vx || 0;
+      var vy = body.vy || 0;
+      // Angle of velocity vector — follows the arc as it flies
+      var angleRad = Math.atan2(vy, vx);
+      var angleDeg = angleRad * (180 / Math.PI);
+      this.el.style.transform = 'rotate(' + angleDeg + 'deg)';
+    } else {
+      // Images face left; walking right needs scaleX(-1) to face right
+      this.el.style.transform = direction > 0 ? 'scaleX(-1)' : 'scaleX(1)';
+    }
 
     if (this._spriteUrl) {
       this._advanceFrame(state, dt);
     } else {
-      this._renderPlaceholder(state);
+      if (state === 'WALKING' || state === 'MOUSE_GRAB') {
+        this._walkFootMsElapsed = (this._walkFootMsElapsed || 0) + dt;
+        if (this._walkFootMsElapsed >= 500) {
+          this._walkFootMsElapsed = 0;
+          this._walkFoot = (this._walkFoot === 0 ? 1 : 0);
+        }
+        if (this._walkFoot === undefined) this._walkFoot = 0;
+      } else {
+        this._walkFootMsElapsed = 0;
+        this._walkFoot = 0;
+      }
+      this._renderPlaceholder(state, direction, body);
     }
   };
 
-  Sprite.prototype._renderPlaceholder = function (state) {
-    var p = PLACEHOLDER[state] || PLACEHOLDER.IDLE;
-    this.el.style.backgroundColor = p.color;
-    this.el.textContent = p.emoji;
+  Sprite.prototype._renderPlaceholder = function (state, direction, body) {
+    var p = PLACEHOLDER[state] || (state === 'MOUSE_GRAB' ? PLACEHOLDER.WALKING : null) || PLACEHOLDER.IDLE;
+    // no background color — show PNG transparency
+    this.el.style.backgroundColor = 'transparent';
+
+    // DRAGGED: pick image by movement direction (no transform; images already oriented)
+    // THROWN: pick image by throw direction (vx)
+    // WALKING: alternate walk left / walk right every 500ms (foot forward); transform flips for right direction
+    var img = p.image;
+    if ((state === 'WALKING' || state === 'MOUSE_GRAB') && p && p.walkLeft && p.walkRight) {
+      img = this._walkFoot ? p.walkRight : p.walkLeft;
+    } else if (state === 'DRAGGED' && p.dragImages) {
+      img = direction > 0 ? p.dragImages.right : (direction < 0 ? p.dragImages.left : p.dragImages.grab);
+    } else if (state === 'THROWN' && p.throwImages && body) {
+      var vx = body.vx || 0;
+      img = vx >= 0 ? p.throwImages.right : p.throwImages.left;
+    }
+
+    if (img) {
+      // show an image instead of an emoji (resolve path for extension/page)
+      var url = resolveAssetPath(img);
+      this.el.style.backgroundImage = 'url("' + url + '")';
+      this.el.style.backgroundRepeat = 'no-repeat';
+      this.el.style.backgroundPosition = 'center';
+      this.el.style.backgroundSize = 'contain';
+      this.el.textContent = '';
+    } else {
+      // clear any previous placeholder image and show emoji
+      this.el.style.backgroundImage = 'none';
+      this.el.textContent = p.emoji || '';
+    }
   };
 
   Sprite.prototype._advanceFrame = function (state, dt) {
@@ -154,3 +230,4 @@ var PZSprite = (function () {
 
   return { Sprite: Sprite };
 })();
+
