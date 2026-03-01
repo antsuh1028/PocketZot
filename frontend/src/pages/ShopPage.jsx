@@ -165,6 +165,23 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
     chrome.runtime.sendMessage({ action: "EQUIP_HAT", hat });
   };
 
+  const handleRemoveAllHats = async () => {
+    if (equippedHat?.user_accessory_id) {
+      try {
+        await fetch(
+          `${BACKEND_URL}/api/accessories/${equippedHat.user_accessory_id}/unequip`,
+          { method: "PATCH" }
+        );
+      } catch { /* ignore */ }
+    }
+    if (typeof chrome !== "undefined") {
+      if (chrome.storage?.local) chrome.storage.local.set({ pocketzot_equipped_hat: null });
+      if (chrome.runtime?.sendMessage) chrome.runtime.sendMessage({ action: "EQUIP_HAT", hat: null });
+    }
+    setEquippedHat(null);
+    fetchInventory();
+  };
+
   const toggleEquip = async (ua) => {
     if (!ua) return;
     setClickFeedbackId(ua.id);
@@ -236,9 +253,25 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
 
       {/* Hats section - ~1 enter below anteater, brown bg from here down */}
       <Box flex={1} minH="140px" mt={4} px={4} py={3} pb={4} overflowY="auto" display="flex" flexDir="column" bg="#72645E">
-        <Text fontFamily={FONT} fontSize="medium" color="#000" mb={3}>
-          Hats:
-        </Text>
+        <HStack justify="space-between" align="center" mb={3}>
+          <Text fontFamily={FONT} fontSize="medium" color="#000">Hats:</Text>
+          <Box
+            as="button"
+            fontFamily={FONT}
+            fontSize="8px"
+            px={2}
+            py={1}
+            bg="#8B3A3A"
+            color="#fff"
+            border="2px solid var(--border)"
+            cursor="pointer"
+            _hover={{ opacity: 0.9 }}
+            _active={{ transform: "scale(0.96)" }}
+            onClick={handleRemoveAllHats}
+          >
+            Remove all hats
+          </Box>
+        </HStack>
         <SimpleGrid columns={2} gap={3} flex={1}>
             {displayItems.map((item, i) => {
               const ua = item?.owned ? inventory.find((inv) => inv.id === item.user_accessory_id || (inv.accessory_id === item.id)) : null;
@@ -284,7 +317,7 @@ export default function ShopPage({ user, onBack, onUserUpdate }) {
                     position="absolute"
                     inset={0}
                     bg="gray"
-                    opacity={0.15}
+                    opacity={0.75}
                     pointerEvents="none"
                   />
                   <Text
