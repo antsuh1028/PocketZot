@@ -1,5 +1,9 @@
 node_modules
-# package-lock.json
+
+# Python virtual environment
+.venv/
+venv/
+env/
 # package.json
 # vite.config.js
 backend\.env

@@ -15,9 +15,10 @@
  *   Row 5: Thrown  (1 frame)
  */
 
+
 var PZSprite = (function () {
 
-  var TILE = 32; // px per sprite tile
+  var TILE = 64; // px per sprite tile
 
   // Map state name → array of { x, y } frame offsets in the sprite sheet
   //lined up for clarity
@@ -40,13 +41,15 @@ var PZSprite = (function () {
     THROWN  : 999,
   };
 
-  // Placeholder: state → color & emoji 
+  // Placeholder: state → color & emoji (or image path for extension assets)
+  // dist/anteaterchar/assets/* is web_accessible; chrome.runtime.getURL resolves it
+  var WALKING_IMG = 'dist/anteaterchar/assets/mm.png';
 
   //FIXME: remove when using real sprite sheet
   var PLACEHOLDER = {
     FALLING : { color: '#ff6b35', emoji: '😱' },
     LANDING : { color: '#ff6b35', emoji: '💥' },
-    WALKING : { color: '#f0b429', emoji: '🐜' },
+    WALKING : { color: '#4caf50', emoji: '🐜', image: WALKING_IMG },
     IDLE    : { color: '#4caf50', emoji: '😴' },
     DRAGGED : { color: '#9c27b0', emoji: '😮' },
     THROWN  : { color: '#e91e63', emoji: '🌀' },
@@ -58,6 +61,19 @@ var PZSprite = (function () {
     this._frame     = 0;
     this._frameMsElapsed = 0;
     this._lastState = null;
+  }
+
+  // Resolve an asset path to a usable URL in different environments:
+  // - If it's already absolute (http(s)/data/) or starts with '/', return as-is
+  // - If running as a browser extension, use chrome.runtime.getURL
+  // - Otherwise resolve relative to the current page URL
+  function resolveAssetPath(p) {
+    if (!p) return p;
+    if (/^(?:https?:|data:|file:|\/)/i.test(p)) return p;
+    if (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function') {
+      try { return chrome.runtime.getURL(p); } catch (e) { /* fallthrough */ }
+    }
+    try { return new URL(p, location.href).href; } catch (e) { return p; }
   }
 
   Sprite.prototype.mount = function () {
@@ -127,8 +143,22 @@ var PZSprite = (function () {
 
   Sprite.prototype._renderPlaceholder = function (state) {
     var p = PLACEHOLDER[state] || PLACEHOLDER.IDLE;
-    this.el.style.backgroundColor = p.color;
-    this.el.textContent = p.emoji;
+    // background color for the placeholder
+    this.el.style.backgroundColor = p.color || 'transparent';
+
+    if (p.image) {
+      // show an image instead of an emoji (resolve path for extension/page)
+      var url = resolveAssetPath(p.image);
+      this.el.style.backgroundImage = 'url("' + url + '")';
+      this.el.style.backgroundRepeat = 'no-repeat';
+      this.el.style.backgroundPosition = 'center';
+      this.el.style.backgroundSize = 'contain';
+      this.el.textContent = '';
+    } else {
+      // clear any previous placeholder image and show emoji
+      this.el.style.backgroundImage = 'none';
+      this.el.textContent = p.emoji || '';
+    }
   };
 
   Sprite.prototype._advanceFrame = function (state, dt) {
