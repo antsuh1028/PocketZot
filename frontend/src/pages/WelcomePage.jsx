@@ -16,6 +16,7 @@ export function PixBtn({
   bg,
   color,
   border,
+  borderRadius = 0,
 }) {
   const variantStyles = {
     default: {
@@ -41,7 +42,7 @@ export function PixBtn({
       bg={bg || style.bg}
       color={color || style.color}
       border={border || style.border}
-      borderRadius={0}
+      borderRadius={borderRadius}
       fontFamily="'Press Start 2P', monospace"
       fontSize="9px"
       _hover={{ filter: "brightness(0.95)" }}
