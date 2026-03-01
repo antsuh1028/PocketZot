@@ -30,7 +30,7 @@
   function createPopover() {
     if (document.getElementById("pocketzot-popover")) return;
 
-    // Outer shell — 136 × 169, transparent so only the card shows
+    // Outer shell — slightly larger so popover text/elements are easier to read
     var popover = document.createElement("div");
     popover.id = "pocketzot-popover";
     popover.style.cssText = `
@@ -38,8 +38,8 @@
       bottom: 20px;
       right: 20px;
       z-index: 2147483646;
-      width: 136px;
-      height: 169px;
+      width: 152px;
+      height: 186px;
       background: transparent;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     `;
@@ -60,13 +60,13 @@
     question.textContent = "Did you want start PocketZot?";
     question.style.cssText = `
       position: absolute;
-      top: 10px;
+      top: 40px;
       left: 10px;
       right: 10px;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 600;
       color: #111827;
-      line-height: 1.3;
+      line-height: 1.35;
       text-align: center;
     `;
     popover.appendChild(question);
@@ -75,83 +75,43 @@
     var bubble = document.createElement("div");
     bubble.style.cssText = `
   position: absolute;
-  top: 74px;
-  left: 10px;
+  top: 100px;
+  left: 30px;
   background: #ffffff;
   border-radius: 10px;
-  padding: 5px 10px;
-  font-size: 12px;
+  padding: 6px 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #111827;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
   white-space: nowrap;
 `;
 
     var tail = document.createElement("div");
     tail.style.cssText = `
   position: absolute;
-  right: -7px;
+  right: -8px;
   top: 50%;
   transform: translateY(-50%);
   width: 0;
   height: 0;
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
-  border-left: 7px solid #ffffff;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 8px solid #ffffff;
 `;
     bubble.appendChild(tail);
     bubble.appendChild(document.createTextNode("Press me!"));
     popover.appendChild(bubble);
-    // var btn = document.createElement("button");
-    // btn.textContent = "Press me!";
-    // btn.style.cssText = `
-    //   background: none;
-    //   border: none;
-    //   padding: 0;
-    //   font-size: 12px;
-    //   font-weight: 700;
-    //   color: #111827;
-    //   cursor: pointer;
-    //   font-family: inherit;
-    //   white-space: nowrap;
-    //   display: block;
-    // `;
-    // btn.onmouseover = function () {
-    //   this.style.opacity = "0.6";
-    // };
-    // btn.onmouseout = function () {
-    //   this.style.opacity = "1";
-    // };
-    // btn.onclick = function () {
-    //   processedPrompts.clear();
-    //   seenNodes = new WeakSet();
-    //   lastPromptCount = 0;
-    //   if (promptObserver) {
-    //     promptObserver.disconnect();
-    //     promptObserver = null;
-    //   }
-    //   localStorage.removeItem("pocketzot_classifications");
-    //   console.log("[PocketZot] Session reset");
-    //   getAnteater().spawn();
-    //   startPromptMonitoring();
-    //   popover.style.transition = "opacity 0.3s ease, transform 0.3s ease";
-    //   popover.style.opacity = "0";
-    //   popover.style.transform = "scale(0.9)";
-    //   setTimeout(function () {
-    //     popover.remove();
-    //   }, 300);
-    // };
-    // bubble.appendChild(btn);
-    // popover.appendChild(bubble);
-
+   
     // Anteater sprite — bottom-right corner of the card
     var sprite = document.createElement("img");
-    sprite.src = chrome.runtime.getURL("dist/Idle State.png");
+    sprite.src = chrome.runtime.getURL("dist/TESTER.png");
     sprite.style.cssText = `
   position: absolute;
   bottom: 0;
-  right: 0;
-  width: 80px;
-  height: 80px;
+  right: -40px;
+  width: 88px;
+  height: 88px;
   object-fit: contain;
   user-select: none;
   cursor: pointer;
