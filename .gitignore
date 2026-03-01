@@ -11,3 +11,4 @@ backend\.env
 .env*.local
 __pycache__/
 backend/src/api/__pycache__/
+backend/.env
