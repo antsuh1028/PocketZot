@@ -23,23 +23,30 @@
 var PZStateMachine = (function () {
 
   var STATES = {
-    FALLING : 'FALLING',
-    LANDING : 'LANDING',
-    WALKING : 'WALKING',
-    IDLE    : 'IDLE',
-    DRAGGED : 'DRAGGED',
-    THROWN  : 'THROWN',
+    FALLING    : 'FALLING',
+    LANDING    : 'LANDING',
+    WALKING    : 'WALKING',
+    IDLE       : 'IDLE',
+    DRAGGED    : 'DRAGGED',
+    THROWN     : 'THROWN',
+    MOUSE_GRAB : 'MOUSE_GRAB',
   };
 
   var DIR = { LEFT: -1, RIGHT: 1 };
 
   // Duration constants (milliseconds)
   var LANDING_DURATION_MS = 180;
-  var IDLE_MIN_MS         = 800;
-  var IDLE_RANGE_MS       = 2500;
+  var IDLE_MIN_MS         = 1600;
+  var IDLE_RANGE_MS       = 5000;
 
-  // Probability per frame of spontaneously going idle (~60fps → ~0.1% = ~1x per 10s)
-  var IDLE_CHANCE_PER_FRAME = 0.0010;
+  // Probability per frame of spontaneously going idle (~60fps → ~0.25% = ~1x per 4s)
+  var IDLE_CHANCE_PER_FRAME = 0.0025;
+
+  var MOUSE_GRAB_DURATION_MS   = 5000;
+  // JUMP FREQUENCY — anteater decides to grab cursor (from WALKING or IDLE)
+  // MOUSE_GRAB_CHANCE_PER_FRAME: per-frame probability at ~60fps
+  // 0.0002 ≈ 1x per 80s | 0.0005 ≈ 1x per 33s | 0.001 ≈ 1x per 17s
+  var MOUSE_GRAB_CHANCE_PER_FRAME = 0.0002;
 
   function StateMachine() {
     this.state     = STATES.FALLING;
@@ -75,6 +82,8 @@ var PZStateMachine = (function () {
       this._duration = LANDING_DURATION_MS;
     } else if (newState === STATES.IDLE) {
       this._duration = IDLE_MIN_MS + Math.random() * IDLE_RANGE_MS;
+    } else if (newState === STATES.MOUSE_GRAB) {
+      this._duration = MOUSE_GRAB_DURATION_MS;
     } else {
       this._duration = null;
     }
@@ -115,9 +124,24 @@ var PZStateMachine = (function () {
         if (Math.random() < IDLE_CHANCE_PER_FRAME) {
           this._go(STATES.IDLE);
         }
+        // Mouse grab prank (can only start from ground)
+        if (body.onGround && Math.random() < MOUSE_GRAB_CHANCE_PER_FRAME) {
+          this._go(STATES.MOUSE_GRAB);
+        }
         break;
 
       case STATES.IDLE:
+        if (this._timer >= this._duration) {
+          this.direction = Math.random() > 0.5 ? DIR.RIGHT : DIR.LEFT;
+          this._go(STATES.WALKING);
+        }
+        // Mouse grab prank
+        if (Math.random() < MOUSE_GRAB_CHANCE_PER_FRAME) {
+          this._go(STATES.MOUSE_GRAB);
+        }
+        break;
+
+      case STATES.MOUSE_GRAB:
         if (this._timer >= this._duration) {
           this.direction = Math.random() > 0.5 ? DIR.RIGHT : DIR.LEFT;
           this._go(STATES.WALKING);
