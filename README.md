@@ -1,68 +1,92 @@
 # PocketZot
 
-Chrome Extension (Manifest V3) with a React popup + FastAPI backend template.
+Chrome Extension (Manifest V3) with a Shimeji-style anteater mascot that walks around on AI chat sites (ChatGPT, Claude, Gemini, Perplexity), plus a React popup and FastAPI backend.
+
+## Features
+
+- **Anteater mascot** — Walks around the page, can be dragged and thrown (Will steal your mouse occaisionally)
+- **Shop** — Buy hats (Plunger, Cracked Egg, Crown, and Christmas Hat) with the ants you collect
+- **Login / Sign up** — Email-based auth for data saving
+- **Prompt classification** — LLM rates your prompts; mascot reacts (good/bad)
+- **Ants & health** — Earn ants for good prompts, spend in shop
 
 ## Structure
 
-- `manifest.json` — extension metadata and popup registration
-- `frontend/pocket_zot.html` — React popup HTML entry (Vite input)
-- `frontend/src/App.jsx` — React popup component
-- `frontend/src/main.jsx` — React mount point
-- `frontend/pocket_zot.css` — popup styles
-- `dist/` — built popup output used by the extension
-- `backend/main.py` — FastAPI app template
+```
+PocketZot/
+├── manifest.json          # Extension metadata, popup, content scripts
+├── background.js          # Service worker (EQUIP_HAT, classify, health)
+├── anteaterchar/          # Content script mascot (physics, sprite, drag)
+│   ├── anteater.js
+│   ├── sprite.js
+│   ├── messageListener.js
+│   └── assets/
+├── frontend/              # React popup (Vite)
+│   ├── pocket_zot.html
+│   ├── src/App.jsx
+│   └── src/pages/
+├── backend/               # FastAPI
+│   ├── src/main.py
+│   ├── src/api/           # users, anteaters, accessories, classifier
+│   └── schema/            # SQL migrations
+└── dist/                  # Built output (popup + anteaterchar)
+```
 
 ## Frontend (React) setup
 
-1. Install Node dependencies:
+1. Install dependencies:
 
-	```bash
-	npm install
-	```
+   ```bash
+   npm install
+   ```
 
-2. Build the popup bundle for the extension:
+2. Build the popup and copy content scripts:
 
-	```bash
-	npm run build
-	```
+   ```bash
+   npm run build
+   ```
 
-## Load extension
+   This builds the popup to `dist/` and copies `anteaterchar/` into `dist/anteaterchar/`.
 
-1. Open Chrome and go to `chrome://extensions`.
-2. Enable **Developer mode**.
-3. Click **Load unpacked**.
-4. Select this folder: `PocketZot`.
-5. Click the PocketZot extension icon to open the popup.
-
-If you update React code, run `npm run build` again, then click **Reload** on the extension card.
-
-## Current functionality
-
-- React-powered popup UI.
-- Enter text in the popup.
-- Click **Save** to persist it using `chrome.storage.local`.
-- Reopen the popup to see it loaded back.
-
-## Backend template (FastAPI)
-
-### Files
-
-- `backend/main.py` — FastAPI app template with `/`, `/health`, `/api/echo`
-- `backend/requirements.txt` — backend Python dependencies
-
-### Run backend
+## Backend (FastAPI) setup
 
 1. Create and activate a Python virtual environment.
 2. Install dependencies:
 
-	```bash
-	pip install -r backend/requirements.txt
-	```
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
 
-3. Start the API server:
+3. Set up PostgreSQL and create a `.env` file with `DATABASE_URL`.
+4. Run migrations:
 
-	```bash
-	uvicorn backend.main:app --reload
-	```
+   ```bash
+   python backend/scripts/run_migration.py
+   ```
 
-4. Open docs at `http://127.0.0.1:8000/docs`.
+5. Start the API server:
+
+   ```bash
+   uvicorn backend.src.main:app --reload
+   ```
+
+   API docs: `http://127.0.0.1:8000/docs`
+
+## Load the extension
+
+1. Open Chrome and go to `chrome://extensions`.
+2. Enable **Developer mode**.
+3. Click **Load unpacked**.
+4. Select the `PocketZot` folder (the one with `manifest.json`).
+5. Click the PocketZot icon to open the popup.
+
+After code changes, run `npm run build` and click **Reload** on the extension card.
+
+## Content script sites
+
+The anteater mascot runs on:
+
+- `https://chatgpt.com/*`
+- `https://claude.ai/*`
+- `https://gemini.google.com/*`
+- `https://*.perplexity.ai/*`

@@ -34,8 +34,8 @@
     };
 
     return (
-      <Box bg="var(--bg)" border="3px solid var(--border)" backgroundSize="cover" backgroundPosition="center" h="100%">      
-        <Box p={5}>
+      <Box bg="var(--bg)" border="3px solid var(--border)" display="flex" flexDirection="column" flex={1} minHeight={0}>
+        <Box p={5} flexShrink={0}>
           <Text
             fontFamily={FONT}
             fontSize="4xl"
@@ -46,8 +46,6 @@
             Sign Up
           </Text>
 
-          {/* Brown center box with gradient effect */}
-
           <Box display="flex" justifyContent="flex-start" mb={-2}>
             <Image
               src="IdleSmooth.png"
@@ -56,12 +54,20 @@
               style={{ imageRendering: "pixelated", transform: "scaleX(-1)" }}
             />
           </Box>
-          <Box
-            bg="linear-gradient(90deg, #8a7a6a 0%, #8a7a6a 80%, #5a4a3a 20%, #5a4a3a 100%)"
-            p={5}
-            mb={3}
-            borderRadius="5px 5px 0 0"
-          >
+        </Box>
+
+        {/* Brown center box — extends to bottom */}
+        <Box
+          flex={1}
+          bg="linear-gradient(90deg, #8a7a6a 0%, #8a7a6a 80%, #5a4a3a 20%, #5a4a3a 100%)"
+          p={5}
+          pb={6}
+          borderRadius="5px 5px 0 0"
+          borderTop="3px solid #5a4a3a"
+          display="flex"
+          flexDirection="column"
+          minHeight={0}
+        >
             <PixInput
               label="Email:"
               value={name}
@@ -82,7 +88,6 @@
                 {loading ? "..." : "Go!"}
               </PixBtn>
             </Box>
-          </Box>
         </Box>
       </Box>
     );
