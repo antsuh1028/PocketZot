@@ -5,6 +5,11 @@ import {
   Heading,
   Text,
   VStack,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
 } from "@chakra-ui/react";
 
 const STORAGE_KEY = "pocketzot_note";

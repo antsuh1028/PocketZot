@@ -53,74 +53,108 @@
     popover.id = 'pocketzot-popover';
     
     popover.style.cssText = `
-      position: absolute;
-      bottom: 20px ;
+      position: fixed;
+      bottom: 20px;
       right: 20px;
       z-index: 2147483646;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      background: transparent;
+      border-radius: 16px;
+      padding: 12px;
+      box-shadow: none;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      color: white;
-      min-width: 240px;
-      max-width: 300px;
-      text-align: center;
+      color: #1f2937;
+      width: auto;
+      min-height: auto;
+      text-align: left;
+      box-sizing: border-box;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
     `;
 
-    var title = document.createElement('div');
-    title.textContent = '🐜 PocketZot';
-    title.style.cssText = `
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 10px;
-    `;
-
-    var description = document.createElement('div');
-    description.textContent = 'Spawn your anteater mascot to keep you company!';
-    description.style.cssText = `
-      font-size: 14px;
-      margin-bottom: 15px;
-      opacity: 0.95;
-      line-height: 1.4;
-    `;
-
-    var button = document.createElement('button');
-    button.textContent = 'Start';
-    button.style.cssText = `
-      background: white;
-      color: #667eea;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 20px;
-      font-weight: 600;
-      font-size: 14px;
+    var mascotPlaceholder = document.createElement('img');
+    mascotPlaceholder.src = chrome.runtime.getURL('dist/Idle State.png');
+    mascotPlaceholder.style.cssText = `
+      width: 80px;
+      height: 80px;
+      border-radius: 10px;
+      object-fit: contain;
+      user-select: none;
+      flex-shrink: 0;
       cursor: pointer;
-      transition: all 0.3s ease;
-      width: 100%;
-      margin-bottom: 8px;
+      transition: all 0.2s ease;
+      filter: brightness(1);
     `;
-
-    button.onmouseover = function() {
-      this.style.transform = 'scale(1.05)';
-      this.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+    
+    mascotPlaceholder.onmouseover = function() {
+      this.style.filter = 'brightness(0.9)';
     };
-    button.onmouseout = function() {
-      this.style.transform = 'scale(1)';
-      this.style.boxShadow = 'none';
+    mascotPlaceholder.onmouseout = function() {
+      this.style.filter = 'brightness(1)';
     };
 
-    button.onclick = function() {
+    var header = document.createElement('div');
+    header.textContent = 'Do you want to start PocketZot?';
+    header.style.cssText = `
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #1f2937;
+    `;
+    
+    var dialogueBox = document.createElement('div');
+    dialogueBox.style.cssText = `
+      background: #ffffff;
+      border: 2px solid #d1d5db;
+      border-radius: 12px;
+      padding: 12px 14px;
+      position: relative;
+      flex: 1;
+      min-width: 140px;
+      transition: all 0.2s ease;
+    `;
+    
+    var speechBubbleTail = document.createElement('div');
+    speechBubbleTail.style.cssText = `
+      position: absolute;
+      bottom: -8px;
+      left: 20px;
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 0px solid transparent;
+      border-top: 8px solid #ffffff;
+    `;
+    dialogueBox.appendChild(speechBubbleTail);
+
+    var dialogueText = document.createElement('div');
+    dialogueText.textContent = 'Press Me!';
+    dialogueText.style.cssText = `
+      font-size: 13px;
+      line-height: 1.4;
+      font-weight: 500;
+      margin: 0;
+      word-wrap: break-word;
+    `;
+    dialogueBox.appendChild(dialogueText);
+
+    mascotPlaceholder.onclick = function() {
       console.log('[PocketZot] Start button clicked');
       
-      // Clear previous session data
+      // Reset ALL session state before starting
       processedPrompts.clear();
+      seenNodes = new WeakSet();
+      lastPromptCount = 0;
+      if (promptObserver) {
+        promptObserver.disconnect();
+        promptObserver = null;
+      }
       localStorage.removeItem('pocketzot_classifications');
       console.log('[PocketZot] Cleared previous session data');
       
       getAnteater().spawn();
       
-      // Start monitoring prompts
+      // Start monitoring prompts — only NOW, after user clicks Start
       startPromptMonitoring();
       
       // Close the popover after spawning
@@ -132,40 +166,29 @@
       }, 300);
     };
 
-    var closeBtn = document.createElement('button');
-    closeBtn.textContent = '✕';
-    closeBtn.style.cssText = `
-      background: rgba(255, 255, 255, 0.2);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 6px 12px;
-      font-size: 16px;
-      cursor: pointer;
-      width: 100%;
-      transition: background 0.2s ease;
+    // var logoPlaceholder = document.createElement('div');
+    // logoPlaceholder.textContent = 'Logo placeholder';
+    // logoPlaceholder.style.cssText = `
+    //   margin-top: 10px;
+    //   font-size: 12px;
+    //   color: #3b82f6;
+    //   text-decoration: underline;
+    //   white-space: nowrap;
+    //   overflow: hidden;
+    //   text-overflow: ellipsis;
+    // `;
+
+    var contentContainer = document.createElement('div');
+    contentContainer.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 0;
     `;
+    contentContainer.appendChild(header);
+    contentContainer.appendChild(dialogueBox);
 
-    closeBtn.onmouseover = function() {
-      this.style.background = 'rgba(255, 255, 255, 0.3)';
-    };
-    closeBtn.onmouseout = function() {
-      this.style.background = 'rgba(255, 255, 255, 0.2)';
-    };
-
-    closeBtn.onclick = function() {
-      popover.style.opacity = '0';
-      popover.style.transform = 'scale(0.9)';
-      popover.style.transition = 'all 0.3s ease';
-      setTimeout(function() {
-        popover.remove();
-      }, 300);
-    };
-
-    popover.appendChild(title);
-    popover.appendChild(description);
-    popover.appendChild(button);
-    popover.appendChild(closeBtn);
+    popover.appendChild(mascotPlaceholder);
+    popover.appendChild(contentContainer);
 
     document.body.appendChild(popover);
 
@@ -215,7 +238,8 @@
   // Prompt monitoring system
   var lastPromptCount = 0;
   var promptObserver = null;
-  var processedPrompts = new Set(); // Track prompts we've already processed
+  var processedPrompts = new Set(); // Track prompt text hashes we've already classified
+  var seenNodes = new WeakSet();    // Track DOM nodes we've already seen — immune to count drift
 
   function detectPlatform() {
     var hostname = window.location.hostname;
@@ -229,25 +253,30 @@
   function getPromptSelectors(platform) {
     var selectors = {
       chatgpt: {
-        // ChatGPT user messages are in divs with data-message-author-role="user"
         messageContainer: 'main',
+        // data-message-author-role is only set to "user" on user turns
         userMessage: '[data-message-author-role="user"]',
         inputField: 'textarea[placeholder*="Message"]'
       },
       claude: {
-        // Claude user messages
-        messageContainer: 'main',
-        userMessage: '[data-test-render-count]',
+        // Claude.ai uses a scrollable div, not <main>
+        messageContainer: '[data-testid="conversation-turn-list"]',
+        messageContainerFallbacks: [
+          '[data-testid="conversation-turn-list"]',
+          '.flex-1.overflow-y-auto',
+          '#thread-content',
+          'div[class*="ConversationContainer"]',
+          'div[class*="conversation"]',
+        ],
+        userMessage: '[data-testid="user-message"]',
         inputField: 'div[contenteditable="true"]'
       },
       gemini: {
-        // Gemini user messages
         messageContainer: 'main',
         userMessage: '.query-content',
         inputField: 'textarea'
       },
       perplexity: {
-        // Perplexity user messages
         messageContainer: 'main',
         userMessage: '[class*="UserQuery"]',
         inputField: 'textarea'
@@ -422,63 +451,66 @@
     
     if (!selectors) return;
 
-    // Mark all existing prompts as already processed
+    // Snapshot all currently-visible user message nodes as "already seen" —
+    // we register their identity so we never classify them, even if the DOM
+    // later mutates and shifts indices around.
     var currentMessages = document.querySelectorAll(selectors.userMessage);
-    lastPromptCount = currentMessages.length;
-    
-    console.log('[PocketZot] Found', currentMessages.length, 'existing messages to mark as processed');
-    
-    // Add all current prompts to processed set
     for (var i = 0; i < currentMessages.length; i++) {
-      var existingPrompt = extractPromptText(currentMessages[i], platform);
-      if (existingPrompt) {
-        var hash = existingPrompt.trim().toLowerCase();
-        processedPrompts.add(hash);
-        console.log('[PocketZot] Marked prompt', i + 1, 'as processed:', existingPrompt.substring(0, 50) + '...');
-      }
+      seenNodes.add(currentMessages[i]);
     }
-    
-    console.log('[PocketZot] ✓ Monitoring started. Marked', processedPrompts.size, 'existing prompts as processed');
-    console.log('[PocketZot] ✓ Only NEW prompts submitted after this will be classified');
+    lastPromptCount = currentMessages.length; // kept for logging only
+
+    console.log('[PocketZot] Baseline:', lastPromptCount, 'existing messages — these will NOT be classified');
+    console.log('[PocketZot] ✓ Only prompts sent AFTER clicking Start will be classified');
     console.log('[PocketZot] To view stored classifications, run: window.PocketZotStorage.getClassifications()');
-    // console.log('[PocketZot]   window.PocketZotStorage.getStats()');
 
     // Use MutationObserver to watch for new messages
     var targetNode = document.querySelector(selectors.messageContainer);
-    
+
     function checkForNewPrompts() {
       var userMessages = document.querySelectorAll(selectors.userMessage);
-      
-      if (userMessages.length > lastPromptCount) {
-        // New message(s) detected
-        console.log('[PocketZot] 📝 DOM changed: Found', userMessages.length, 'total messages (was', lastPromptCount + ')');
-        for (var i = lastPromptCount; i < userMessages.length; i++) {
-          var promptText = extractPromptText(userMessages[i], platform);
-          if (promptText) {
-            onPromptDetected(promptText);
-          }
+
+      for (var i = 0; i < userMessages.length; i++) {
+        var node = userMessages[i];
+        if (seenNodes.has(node)) continue; // already processed or pre-existing
+        seenNodes.add(node);
+
+        var promptText = extractPromptText(node, platform);
+        if (promptText) {
+          console.log('[PocketZot] 📝 New user node detected');
+          onPromptDetected(promptText);
         }
-        lastPromptCount = userMessages.length;
       }
     }
 
-    // Set up observer to watch for DOM changes
-    if (targetNode) {
-      promptObserver = new MutationObserver(function(mutations) {
-        checkForNewPrompts();
-      });
-
-      promptObserver.observe(targetNode, {
-        childList: true,
-        subtree: true
-      });
-
-      console.log('[PocketZot] Prompt observer initialized');
-    } else {
-      console.log('[PocketZot] Could not find message container, retrying...');
-      // Retry after a delay if the page hasn't fully loaded
-      setTimeout(startPromptMonitoring, 2000);
+    // Try the primary selector, then fallbacks
+    var targetNode = document.querySelector(selectors.messageContainer);
+    if (!targetNode && selectors.messageContainerFallbacks) {
+      for (var f = 0; f < selectors.messageContainerFallbacks.length; f++) {
+        targetNode = document.querySelector(selectors.messageContainerFallbacks[f]);
+        if (targetNode) {
+          console.log('[PocketZot] Found container via fallback:', selectors.messageContainerFallbacks[f]);
+          break;
+        }
+      }
     }
+
+    // If still not found, observe <body> as a last resort — broad but always works
+    if (!targetNode) {
+      targetNode = document.body;
+      console.log('[PocketZot] ⚠️ Could not find specific message container, falling back to <body>');
+    }
+
+    promptObserver = new MutationObserver(function() {
+      checkForNewPrompts();
+    });
+
+    promptObserver.observe(targetNode, {
+      childList: true,
+      subtree: true,
+    });
+
+    console.log('[PocketZot] ✓ Prompt observer attached to:', targetNode.tagName || targetNode);
   }
 
   // Show popover when content script loads
@@ -489,13 +521,8 @@
     console.error('[PocketZot] Popover creation failed:', err);
   }
 
-  // Start monitoring for prompts
-  try {
-    console.log('[PocketZot] Initializing prompt monitoring...');
-    startPromptMonitoring();
-  } catch (err) {
-    console.error('[PocketZot] Prompt monitoring failed:', err);
-  }
+  // NOTE: startPromptMonitoring() is intentionally NOT called here.
+  // It is only called when the user clicks the Start button in the popover.
 
   // Expose helper functions globally for popup/frontend access
   window.PocketZotStorage = {

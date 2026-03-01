@@ -4,10 +4,9 @@ Prompt classification API using fine-tuned OpenAI model.
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from openai import OpenAI
-from sqlalchemy import text
 from typing import Optional
 
 # Load .env file before initializing OpenAI client
@@ -49,11 +48,11 @@ class ClassifyResponse(BaseModel):
 
 
 @router.post("/", response_model=ClassifyResponse)
-async def classify_prompt(request: ClassifyRequest, req: Request):
+async def classify_prompt(request: ClassifyRequest):
     """
     Classify a student prompt using the fine-tuned taxonomy model.
     Returns the classification value (-3 to +2) and an optional suggestion.
-    Saves the classification to the database.
+    Note: Results are stored in localStorage on the frontend, not in database.
     """
     if not request.prompt or not request.prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt cannot be empty")
@@ -98,40 +97,17 @@ async def classify_prompt(request: ClassifyRequest, req: Request):
             match = re.search(r'[-+]?\d+', content)
             if match:
                 value = int(match.group())
-            else:
+            else: 
                 logger.error(f"Could not parse response: {content}")
                 raise HTTPException(status_code=500, detail=f"Could not parse response: {content}")
 
-        # Save to database
-        classification_id = None
-        try:
-            with req.app.state.db_engine.connect() as conn:
-                result = conn.execute(
-                    text("""
-                        INSERT INTO classifications (uid, prompt, classification_value, suggestion, platform)
-                        VALUES (:uid, :prompt, :value, :suggestion, :platform)
-                        RETURNING id
-                    """),
-                    {
-                        "uid": request.user_id,
-                        "prompt": request.prompt,
-                        "value": value,
-                        "suggestion": suggestion,
-                        "platform": request.platform
-                    }
-                )
-                conn.commit()
-                classification_id = result.fetchone()[0]
-                logger.info(f"Saved classification with ID: {classification_id}")
-        except Exception as db_error:
-            logger.error(f"Failed to save to database: {db_error}")
-            # Don't fail the request if DB save fails
+        # Note: Database saving is disabled - using localStorage on frontend instead
         
         return ClassifyResponse(
             value=value,
             suggestion=suggestion,
             raw_response=content,
-            classification_id=classification_id
+            classification_id=None
         )
 
     except HTTPException:

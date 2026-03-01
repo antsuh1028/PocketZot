@@ -33,7 +33,7 @@ def main():
         sys.exit(1)
 
     model_id = sys.argv[1]
-    user_prompt = sys.argv[2] if len(sys.argv) > 2 else "I have a design but I don't know what color to make the button. What color should I do based on the screen?"
+    user_prompt = sys.argv[2] if len(sys.argv) > 2 else "Explain dijkstra's algorithm and how i can use it and what it is used for and why people use it"
 
     if not os.environ.get("OPENAI_API_KEY"):
         print("Error: Set OPENAI_API_KEY", file=sys.stderr)
