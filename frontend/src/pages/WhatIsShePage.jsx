@@ -3,43 +3,6 @@ import { PixBtn } from "./WelcomePage.jsx";
 
 const FONT = "'Press Start 2P', monospace";
 
-function TitleBar() {
-  return (
-    <Box
-      bg="var(--panel)"
-      borderBottom="3px solid var(--border)"
-      px={3}
-      py="5px"
-      display="flex"
-      alignItems="center"
-      justifyContent="space-between"
-    >
-      <Text fontFamily={FONT} fontSize="9px" color="var(--dark)">
-        Pocket Zot
-      </Text>
-      <Box display="flex" gap="4px">
-        {["◀", "✕"].map((s) => (
-          <Box
-            key={s}
-            w="16px"
-            h="16px"
-            bg="var(--btn-bg)"
-            border="2px solid var(--btn-border)"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            fontSize="8px"
-            cursor="pointer"
-            color="var(--dark)"
-            fontFamily={FONT}
-          >
-            {s}
-          </Box>
-        ))}
-      </Box>
-    </Box>
-  );
-}
 
 function InfoCard({ children }) {
   return (
@@ -66,7 +29,6 @@ export default function WhatIsShePage({ onNext }) {
       border="3px"
       h="590px"
     >
-      <TitleBar />
       <Box p={5}>
         {/* Anteater + speech bubble */}
         <Box display="flex" alignItems="flex-start" gap={3} mb={4}>
