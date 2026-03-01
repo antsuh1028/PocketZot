@@ -8,6 +8,7 @@ import WhatIsShePage from "./pages/WhatIsShePage.jsx";
 import HowSheHelpsPage from "./pages/HowshehelpsPage.jsx";
 import MainPage from "./pages/MainPage.jsx";
 import ShopPage from "./pages/ShopPage.jsx";
+import Header from "./components/Header.jsx";
 
 const DEV_MODE = true;
 const BACKEND_URL = "http://127.0.0.1:8000";
@@ -97,19 +98,10 @@ export default function App() {
         </Box>
       )}
 
+      <Header />
       {/* Page content — mt clears the fixed nav bar */}
-      <Box
-        width="350px"
-        height="full"
-        mx="auto"
-        border="3px solid"
-        borderColor="black"
-        borderRadius="8px"
-        backgroundImage={
-          view === "signup" || view === "login"
-            ? "url('Background.png')"
-            : "none"
-        }
+      <Box width="375px" maxHeight="400" mx="auto" border="1px solid" borderColor="black" 
+        backgroundImage={view === "signup" || view === "login" ? "url('Background.png')" : "none"}
         backgroundSize="cover"
         backgroundPosition="center"
         minHeight={view === "signup" || view === "login" ? "100vh" : "auto"}
