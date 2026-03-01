@@ -11,46 +11,44 @@ import Header from "../components/Header.jsx";
 export default function WelcomePage({ onSignUp, onLogIn }) {
   return (
     <Box minW="375px" minH="400px" bg="gray.50" color="gray.800" p={4}>
-      <VStack align="stretch" gap={4} maxW="400px" mx="auto" h="full" justify="center">
-        <Header />
+      <VStack align="stretch" gap={4} px={8} maxW="350px" mx="auto" h="full" justify="center">
 
         {/* Welcome Message */}
         <Box textAlign="center" py={4}>
-          <Heading size="lg" mb={3}>Welcome to Pocket Zot!</Heading>
+          <Heading fontFamily="Reddit Mono" size="4xl" mb={3}>
+            Welcome to Pocket Zot!
+          </Heading>
         </Box>
 
         {/* Anteater Illustration Placeholder */}
-        <Box
-          w="160px"
-          h="160px"
-          mx="auto"
-          borderRadius="full"
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          fontSize="6xl"
-          boxShadow="lg"
+        <VStack
         >
-          <Image src="/Plop.png" w="100%" h="100%" />
-        </Box>
+          <Image src="USEFUL.png" width="150px"/>
+          <Image src="WelcomeHand.png" width="180px"/>
+        </VStack>
 
         {/* Action Buttons */}
-        <VStack gap={3} pt={2}>
+        <VStack pt={2} fontFamily="Reddit Mono">
           <Button
-            colorScheme="orange"
+            bg="#72645E"
             size="lg"
-            w="full"
+            width="full"
             onClick={onSignUp}
             fontWeight="bold"
+            borderRadius={10}
+            marginBottom="30px"
           >
-            Get Started
+            Sign Up
           </Button>
 
           <Button
             variant="outline"
+            borderColor="#72645E"
+            borderWidth={2}
             size="lg"
-            w="full"
+            width="full"
             onClick={onLogIn}
+            borderRadius={10}
           >
             Log in
           </Button>
