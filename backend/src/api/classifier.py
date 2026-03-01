@@ -97,7 +97,7 @@ async def classify_prompt(request: ClassifyRequest):
             match = re.search(r'[-+]?\d+', content)
             if match:
                 value = int(match.group())
-            else:
+            else: 
                 logger.error(f"Could not parse response: {content}")
                 raise HTTPException(status_code=500, detail=f"Could not parse response: {content}")
 
