@@ -6,7 +6,8 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import Header from "../components/Header.jsx";
+
+import "../index.css";
 
 export function PixBtn({
   children,
@@ -55,20 +56,20 @@ export function PixBtn({
 
 export default function WelcomePage({ onSignUp, onLogIn }) {
   return (
-    <Box minW="375px" minH="400px" bg="gray.50" color="gray.800" >
-      <VStack align="stretch" gap={4} h="full" justify="center">
+    <Box bg="gray.50" color="gray.800" p={4}>
+      <VStack align="stretch" gap={4} px={8} maxW="350px" mx="auto" justify="center">
 
         {/* Welcome Message */}
-        <Box textAlign="center">
-          <Heading fontFamily="Reddit Mono" size="4xl" mb={4}>
+        <Box textAlign="center" py={4}>
+          <Heading fontFamily="Reddit Mono" size="4xl" mb="30px">
             Welcome to Pocket Zot!
           </Heading>
         </Box>
 
         {/* Anteater Illustration Placeholder */}
-        <VStack gap={2}>
-          <Image src="USEFUL.png" width="150px"/>
-          <Image src="WelcomeHand.png" width="180px"/>
+        <VStack gap={0} position="relative">
+          <Image src="AnteaterJump.png" width="90px" position="absolute" left="70px" top="-58px" className="anteater-entrance"/>
+          <Image src="WelcomeHand.png" width="150px"/>
         </VStack>
 
         {/* Action Buttons */}
@@ -80,8 +81,6 @@ export default function WelcomePage({ onSignUp, onLogIn }) {
             onClick={onSignUp}
             fontWeight="bold"
             borderRadius={10}
-            px={6}
-            py={6}
           >
             Sign Up
           </Button>
