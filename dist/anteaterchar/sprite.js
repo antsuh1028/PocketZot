@@ -18,7 +18,7 @@
 
 var PZSprite = (function () {
 
-  var TILE = 64; // px per sprite tile
+  var TILE = 88; // px per sprite tile
 
   // Map state name → array of { x, y } frame offsets in the sprite sheet
   //lined up for clarity
@@ -41,18 +41,27 @@ var PZSprite = (function () {
     THROWN  : 999,
   };
 
-  // Placeholder: state → color & emoji (or image path for extension assets)
-  // dist/anteaterchar/assets/* is web_accessible; chrome.runtime.getURL resolves it
-  var WALKING_IMG = 'dist/anteaterchar/assets/mm.png';
+  var ASSETS = 'dist/anteaterchar/assets/';
 
   //FIXME: remove when using real sprite sheet
   var PLACEHOLDER = {
-    FALLING : { color: '#ff6b35', emoji: '😱' },
-    LANDING : { color: '#ff6b35', emoji: '💥' },
-    WALKING : { color: '#4caf50', emoji: '🐜', image: WALKING_IMG },
-    IDLE    : { color: '#4caf50', emoji: '😴' },
-    DRAGGED : { color: '#9c27b0', emoji: '😮' },
-    THROWN  : { color: '#e91e63', emoji: '🌀' },
+    FALLING : { image: ASSETS + 'Falling rotate -45 degree.png' },
+    LANDING : { image: ASSETS + 'Plop.png' },
+    WALKING : { image: ASSETS + 'mm.png' },
+    IDLE    : { image: ASSETS + 'Idle State.png' },
+    DRAGGED : {
+      dragImages: {
+        grab  : ASSETS + 'Grab State.png',
+        left  : ASSETS + 'Drag Left.png',
+        right : ASSETS + 'Drag Right.png',
+      },
+    },
+    THROWN  : {
+      throwImages: {
+        left  : ASSETS + 'Drag Left.png',
+        right : ASSETS + 'Drag Right.png',
+      },
+    },
   };
 
   function Sprite(spriteUrl) {
@@ -62,11 +71,7 @@ var PZSprite = (function () {
     this._frameMsElapsed = 0;
     this._lastState = null;
   }
-
-  // Resolve an asset path to a usable URL in different environments:
-  // - If it's already absolute (http(s)/data/) or starts with '/', return as-is
-  // - If running as a browser extension, use chrome.runtime.getURL
-  // - Otherwise resolve relative to the current page URL
+  
   function resolveAssetPath(p) {
     if (!p) return p;
     if (/^(?:https?:|data:|file:|\/)/i.test(p)) return p;
@@ -91,22 +96,21 @@ var PZSprite = (function () {
       cursor        : 'grab',
       userSelect    : 'none',
       overflow      : 'hidden',
-      borderRadius  : '10px',
+      borderRadius  : '0',
+      border        : 'none',
+      outline       : 'none',
+      boxShadow     : 'none',
       display       : 'flex',
       alignItems    : 'center',
       justifyContent: 'center',
       fontSize      : '32px',
-      boxShadow     : '0 3px 10px rgba(0,0,0,0.25)',
-      transition    : 'background-color 0.08s',
+      backgroundColor: 'transparent',
       willChange    : 'transform, left, top', // GPU hint
     });
 
     if (this._spriteUrl) {
       el.style.backgroundImage  = 'url(' + this._spriteUrl + ')';
       el.style.backgroundRepeat = 'no-repeat';
-      el.style.backgroundColor  = 'transparent';
-      el.style.boxShadow        = 'none';
-      el.style.borderRadius     = '0';
     }
 
     this.el = el;
@@ -121,34 +125,55 @@ var PZSprite = (function () {
   };
 
   /**
-   * update(x, y, state, direction, dt)
-   * Called every animation frame.
+   * update(x, y, state, direction, dt, body)
+   * Called every animation frame. body optional (for THROWN velocity/rotation).
    */
-  Sprite.prototype.update = function (x, y, state, direction, dt) {
+  Sprite.prototype.update = function (x, y, state, direction, dt, body) {
     if (!this.el) return;
 
     // Position via left/top (GPU-composited with will-change)
     this.el.style.left = Math.round(x) + 'px';
     this.el.style.top  = Math.round(y) + 'px';
 
-    // Horizontal flip
-    this.el.style.transform = direction < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+    // Transform: DRAGGED = none; FALLING = none; THROWN = rotate by velocity arc; else horizontal flip
+    if (state === 'DRAGGED' || state === 'FALLING') {
+      this.el.style.transform = 'none';
+    } else if (state === 'THROWN' && body) {
+      var vx = body.vx || 0;
+      var vy = body.vy || 0;
+      // Angle of velocity vector — follows the arc as it flies
+      var angleRad = Math.atan2(vy, vx);
+      var angleDeg = angleRad * (180 / Math.PI);
+      this.el.style.transform = 'rotate(' + angleDeg + 'deg)';
+    } else {
+      this.el.style.transform = direction < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+    }
 
     if (this._spriteUrl) {
       this._advanceFrame(state, dt);
     } else {
-      this._renderPlaceholder(state);
+      this._renderPlaceholder(state, direction, body);
     }
   };
 
-  Sprite.prototype._renderPlaceholder = function (state) {
+  Sprite.prototype._renderPlaceholder = function (state, direction, body) {
     var p = PLACEHOLDER[state] || PLACEHOLDER.IDLE;
-    // background color for the placeholder
-    this.el.style.backgroundColor = p.color || 'transparent';
+    // no background color — show PNG transparency
+    this.el.style.backgroundColor = 'transparent';
 
-    if (p.image) {
+    // DRAGGED: pick image by movement direction (no transform; images already oriented)
+    // THROWN: pick image by throw direction (vx)
+    var img = p.image;
+    if (state === 'DRAGGED' && p.dragImages) {
+      img = direction > 0 ? p.dragImages.right : (direction < 0 ? p.dragImages.left : p.dragImages.grab);
+    } else if (state === 'THROWN' && p.throwImages && body) {
+      var vx = body.vx || 0;
+      img = vx >= 0 ? p.throwImages.right : p.throwImages.left;
+    }
+
+    if (img) {
       // show an image instead of an emoji (resolve path for extension/page)
-      var url = resolveAssetPath(p.image);
+      var url = resolveAssetPath(img);
       this.el.style.backgroundImage = 'url("' + url + '")';
       this.el.style.backgroundRepeat = 'no-repeat';
       this.el.style.backgroundPosition = 'center';

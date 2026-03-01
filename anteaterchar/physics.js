@@ -12,6 +12,7 @@
 var PZPhysics = (function () {
   var GRAVITY         = 0.25;
   var TERMINAL_VEL    = 20;
+  var FLOOR_OFFSET    = 25; // px above bottom (set small value if clipping into taskbar)
   var WALK_SPEED      = 0.5;
   var FRICTION        = 0.80;
   var THROW_AIR_DAMP  = 0.97;
@@ -60,7 +61,7 @@ var PZPhysics = (function () {
     this.y += this.vy;
 
     // Collision
-    var floorY = viewportH - this.h;
+    var floorY = viewportH - this.h - FLOOR_OFFSET;
 
     // Floor
     if (this.y >= floorY) {

@@ -27,6 +27,23 @@ function copyContentScripts() {
       } catch {
         // assets folder may not exist yet
       }
+      // Copy drag/grab images from frontend/public to dist/anteaterchar/assets
+      const publicDir = resolve(__dirname, "frontend/public");
+      const extraImages = [
+        "Drag Left.png", "Drag Right.png", "Grab State.png",
+        "Falling rotate -45 degree.png", "Idle State.png", "Plop.png"
+      ];
+      extraImages.forEach((f) => {
+        const src = join(publicDir, f);
+        try {
+          if (statSync(src).isFile()) {
+            copyFileSync(src, join(assetsDest, f));
+            console.log(`[PocketZot] copied ${f} → dist/anteaterchar/assets/`);
+          }
+        } catch {
+          /* file may not exist */
+        }
+      });
       const files = [
         "physics.js",
         "stateMachine.js",

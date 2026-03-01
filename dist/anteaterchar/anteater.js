@@ -119,8 +119,11 @@
     // 3. Step physics
     body.step(vw, vh, isDragging);
 
-    // 4. Render
-    this._sprite.update(body.x, body.y, fsm.state, fsm.direction, dt);
+    // 3b. While dragging: switch to Grab State after 300ms of no movement
+    if (isDragging) this._drag.updateIdleCheck(performance.now());
+
+    // 4. Render (pass body for THROWN velocity-based rotation)
+    this._sprite.update(body.x, body.y, fsm.state, fsm.direction, dt, body);
   };
 
   // Expose globally

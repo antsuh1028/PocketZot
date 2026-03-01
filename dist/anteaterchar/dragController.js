@@ -4,10 +4,11 @@
  */
 
 var PZDrag = (function () {
-  var HISTORY_WINDOW_MS = 100; // ms window for velocity estimation
-  var HISTORY_SIZE      = 10;  // max samples to keep (Mem optimization, it's fine it's not exact)
-  var MAX_THROW         = 24;  // px/frame cap
-  var ASSUMED_FPS_MS    = 16.67; // 60fps converted to ms 
+  var HISTORY_WINDOW_MS  = 100;  // ms window for velocity estimation
+  var HISTORY_SIZE       = 10;   // max samples to keep (Mem optimization, it's fine it's not exact)
+  var MAX_THROW          = 24;   // px/frame cap
+  var ASSUMED_FPS_MS     = 16.67; // 60fps converted to ms
+  var GRAB_STATE_DELAY_MS = 300; // ms of no movement before switching back to Grab State
 
   function DragController(el, body, fsm) {
     this.el  = el;
@@ -18,6 +19,7 @@ var PZDrag = (function () {
     this._offsetX  = 0;
     this._offsetY  = 0;
     this._history  = [];
+    this._lastMoveTime = 0;
 
     // Bind so we can cleanly remove listeners
     this._onDown  = this._onDown.bind(this);
@@ -35,6 +37,14 @@ var PZDrag = (function () {
     document.removeEventListener('mouseup',   this._onUp);
   };
 
+  // Call from game loop each frame when dragging — switches to Grab State after 300ms idle
+  DragController.prototype.updateIdleCheck = function (now) {
+    if (!this._dragging || this.fsm.direction === 0) return;
+    if (now - this._lastMoveTime >= GRAB_STATE_DELAY_MS) {
+      this.fsm.direction = 0;
+    }
+  };
+
   DragController.prototype._onDown = function (e) {
     if (e.button !== 0) return;
     e.preventDefault();
@@ -49,6 +59,8 @@ var PZDrag = (function () {
 
     this.el.style.cursor = 'grabbing';
     this.fsm.startDrag();
+    this.fsm.direction = 0; // neutral → show Grab State until user moves
+    this._lastMoveTime = 0;
     this._record(e.clientX, e.clientY);
 
     document.addEventListener('mousemove', this._onMove);
@@ -57,6 +69,20 @@ var PZDrag = (function () {
 
   DragController.prototype._onMove = function (e) {
     if (!this._dragging) return;
+
+    var now = performance.now();
+
+    // Update direction for sprite (game loop handles Grab State after 300ms idle)
+    if (this._history.length >= 1) {
+      var prev = this._history[this._history.length - 1];
+      if (e.clientX > prev.x) {
+        this.fsm.direction = 1;
+        this._lastMoveTime = now;
+      } else if (e.clientX < prev.x) {
+        this.fsm.direction = -1;
+        this._lastMoveTime = now;
+      }
+    }
 
     // Pin physics body directly to cursor (no gravity while dragging)
     this.body.x  = e.clientX - this._offsetX;
