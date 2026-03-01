@@ -14,7 +14,7 @@ import BadCommandPage from "./pages/BadCommandPage.jsx";
 import StudySummaryPage from "./pages/StudySummaryPage.jsx";
 import Header from "./components/Header.jsx";
 
-const DEV_MODE = true;
+const DEV_MODE = false;
 const BACKEND_URL = "http://127.0.0.1:8000";
 const PAGES = ["welcome","signup","login","meet","whatisshe","howshehelps","main","shop","idle","good","bad","summary"];
 
@@ -55,64 +55,91 @@ export default function App() {
   }, []);
 
   // Dev auto-login and check for pending classification on mount
-  useEffect(() => {
-    const initializeApp = async () => {
-      // First, check if there's a pending classification view
-      if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
-        const data = await new Promise((resolve) => {
-          chrome.storage.local.get(["pocketzot_view_classification"], resolve);
-        });
+useEffect(() => {
+  const initializeApp = async () => {
+    try {
+      const savedUser = localStorage.getItem("pocketzot_user");
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        console.log('[PocketZot] App init - Restored user:', u.id, u.name);
+        setUser(u);
 
-        if (data && data.pocketzot_view_classification) {
-          const cls = data.pocketzot_view_classification;
-          if (cls && typeof cls.value === "number") {
-            // Login user first
-            if (DEV_MODE) {
-              try {
-                const res = await fetch(`${BACKEND_URL}/api/users/1`);
-                if (res.ok) {
-                  const u = await res.json();
-                  setUser(u);
-                  localStorage.setItem("pocketzot_user", JSON.stringify(u));
-                }
-              } catch (e) {
-                console.error("Failed to auto-login:", e);
-              }
+        if (typeof chrome !== "undefined" && chrome.storage?.local) {
+          chrome.storage.local.set({ userId: u.id });
+          console.log('[PocketZot] Stored userId in chrome:', u.id);
+
+          const data = await new Promise((resolve) =>
+            chrome.storage.local.get(["pocketzot_view_classification"], resolve)
+          );
+          if (data?.pocketzot_view_classification) {
+            const cls = data.pocketzot_view_classification;
+            if (typeof cls.value === "number") {
+              setLastClassification(cls);
+              setView(cls.value > 0 ? "good" : "bad");
+              chrome.storage.local.remove(["pocketzot_view_classification"]);
+              return;
             }
-            // Then navigate to classification view
-            setLastClassification(cls);
-            setView(cls.value > 0 ? "good" : "bad");
-            // Clear the pending request
-            chrome.storage.local.remove(["pocketzot_view_classification"]);
-            return;
           }
         }
+
+        setView("main");
+        return;
       }
+    } catch (e) {
+      console.error("Failed to restore user:", e);
+    }
 
-      // No pending classification, do regular dev auto-login
-      if (!DEV_MODE) return;
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/users/1`);
-        if (res.ok) {
-          const u = await res.json();
-          setUser(u);
-          localStorage.setItem("pocketzot_user", JSON.stringify(u));
-          setView("main");
-        }
-      } catch (e) {
-        console.error("Failed to auto-login:", e);
-      }
-    };
+    // No saved user — clear chrome storage so background script can't use stale userId
+    console.log('[PocketZot] App init - No saved user, clearing chrome storage');
+    if (typeof chrome !== "undefined" && chrome.storage?.local) {
+      // Clear all user-related data
+      chrome.storage.local.remove(["userId", "anteaterDetails", "pocketzot_classifications", "pocketzot_equipped_hat"]);
+      console.log('[PocketZot] Cleared all user data from chrome.storage');
+    }
+    // Stay on "welcome"
+  };
 
-    initializeApp();
-  }, []);
-
+  initializeApp();
+}, []);
   // Fetch anteater whenever user changes
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      // Clear chrome storage when no user is logged in
+      if (typeof chrome !== "undefined" && chrome.storage?.local) {
+        chrome.storage.local.remove(["userId", "anteaterDetails"]);
+      }
+      return;
+    }
+    
+    // Clear old anteater cache and set new userId immediately
+    if (typeof chrome !== "undefined" && chrome.storage?.local) {
+      chrome.storage.local.set({ 
+        userId: user.id,
+        anteaterDetails: null  // Clear old cache
+      });
+    }
+    
     fetch(`${BACKEND_URL}/api/anteaters`)
       .then(r => r.json())
-      .then(list => setAnteater(list.find(a => a.uid === user.id) || null))
+      .then(list => {
+        const userAnt = list.find(a => a.uid === user.id) || null;
+        setAnteater(userAnt);
+        
+        // Cache the anteater in chrome storage for background script
+        if (userAnt && typeof chrome !== "undefined" && chrome.storage?.local) {
+          chrome.storage.local.set({
+            userId: user.id,
+            anteaterDetails: {
+              id: userAnt.id,
+              uid: user.id,
+              name: userAnt.name,
+              health: userAnt.health,
+              ants: user.ants || 0,
+              isDead: userAnt.is_dead || false
+            }
+          });
+        }
+      })
       .catch(() => {});
   }, [user]);
 
@@ -157,6 +184,10 @@ export default function App() {
 
   const handleLogin = (u) => {
     setUser(u);
+    // Store userId in chrome storage for background script
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({ userId: u.id });
+    }
     go("meet");
   };
 

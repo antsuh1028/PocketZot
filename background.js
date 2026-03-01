@@ -74,30 +74,46 @@ chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {
 
   if (message.action === 'UPDATE_HEALTH') {
     chrome.storage.local.get(['userId', 'anteaterDetails'], function (data) {
-      var userId = data.userId || 1; // Default to user ID 1
+      console.log('[PocketZot] UPDATE_HEALTH - Raw chrome.storage data:', JSON.stringify(data));
+      // Prefer anteaterDetails.uid if available, otherwise use stored userId
+      var userId = data.anteaterDetails && data.anteaterDetails.uid ? data.anteaterDetails.uid : data.userId;
       var anteaterDetails = data.anteaterDetails;
+      
+      console.log('[PocketZot] UPDATE_HEALTH - Resolved userId:', userId, ', source: anteaterDetails.uid=' + (data.anteaterDetails?.uid), ', data.userId=' + data.userId);
 
-      // If no anteater details in storage, fetch them for the user
-      if (!anteaterDetails || !anteaterDetails.id) {
-        fetch(BACKEND_URL + '/api/anteaters')
-          .then(function (r) { return r.json(); })
-          .then(function (list) {
-            var found = list.find(function (a) { return a.uid === userId; });
-            if (!found) {
-              sendResponse({ ok: false, error: 'No anteater found for user ' + userId });
-              return;
-            }
-            // Now update health with the found anteater
-            updateHealthWithAnteater(found, message.delta, sendResponse);
-          })
-          .catch(function (err) {
-            sendResponse({ ok: false, error: 'Failed to fetch anteater: ' + err.message });
-          });
+      // If we have cached anteater details, use them directly
+      if (anteaterDetails && anteaterDetails.id) {
+        console.log('[PocketZot] Using cached anteater for user', userId);
+        updateHealthWithAnteater(anteaterDetails, message.delta, sendResponse);
         return;
       }
 
-      // If we have anteater details, update health
-      updateHealthWithAnteater(anteaterDetails, message.delta, sendResponse);
+      // If no userId, we can't proceed
+      if (!userId) {
+        console.error('[PocketZot] UPDATE_HEALTH - No user ID found! Storage data:', data);
+        sendResponse({ ok: false, error: 'No user ID found - user not logged in' });
+        return;
+      }
+
+      // If no anteater details in storage, fetch them for the user
+      console.log('[PocketZot] Fetching anteater list for userId:', userId);
+      fetch(BACKEND_URL + '/api/anteaters')
+        .then(function (r) { return r.json(); })
+        .then(function (list) {
+          var found = list.find(function (a) { return a.uid === userId; });
+          if (!found) {
+            console.error('[PocketZot] No anteater found for user', userId, 'in list:', list);
+            sendResponse({ ok: false, error: 'No anteater found for user ' + userId });
+            return;
+          }
+          console.log('[PocketZot] Found anteater for user', userId);
+          // Now update health with the found anteater
+          updateHealthWithAnteater(found, message.delta, sendResponse);
+        })
+        .catch(function (err) {
+          console.error('[PocketZot] Failed to fetch anteater list:', err);
+          sendResponse({ ok: false, error: 'Failed to fetch anteater: ' + err.message });
+        });
     });
 
     return true; // keep channel open for async sendResponse
